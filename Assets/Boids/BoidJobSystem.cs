@@ -310,6 +310,7 @@ namespace ew
                 rotations[b.boidId] = r.Value;
             })
             .ScheduleParallel(boidHandle);
+            Dependency = cfJobHandle;
             return;
         }
     }
