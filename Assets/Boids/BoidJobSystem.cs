@@ -203,11 +203,17 @@ namespace ew
             }
             return false;
         }
+        
+        [NativeDisableParallelForRestriction]        
         NativeArray<int> neighbours;
 
         [NativeDisableParallelForRestriction]
         public NativeArray<Vector3> positions;
+
+        [NativeDisableParallelForRestriction]        
         public NativeArray<Quaternion> rotations;
+        
+        [NativeDisableParallelForRestriction]        
         public NativeArray<float> speeds;
 
         public NativeMultiHashMap<int, int> cells;
@@ -261,7 +267,7 @@ namespace ew
             .ForEach((ref Translation p, ref Rotation r, ref Boid b) =>
             {
                 positions[b.boidId] = p.Value;
-                //rotations[b.boidId] = r.Value;
+                rotations[b.boidId] = r.Value;
             })
             .ScheduleParallel(this.Dependency);
             this.Dependency = ctjHandle;
