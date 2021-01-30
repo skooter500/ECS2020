@@ -7,7 +7,6 @@ using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
 
-
 namespace ew
 {
     public struct Spine : IComponentData
@@ -16,6 +15,7 @@ namespace ew
         public int spineId;
         public Vector3 offset;
     }
+    /*
 
     struct SpineJob : IJobProcessComponentData<Spine, Position, Rotation>
     {
@@ -151,4 +151,7 @@ namespace ew
         }
 
     }
+    */
 }
+
+

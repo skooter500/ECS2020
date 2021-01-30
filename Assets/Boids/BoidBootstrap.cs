@@ -100,8 +100,8 @@ namespace ew
             allTheheadsAndTails.Dispose();
             allTheSpines.Dispose();
             BoidJobSystem.Instance.Enabled = false;
-            SpineSystem.Instance.Enabled = false;
-            HeadsAndTailsSystem.Instance.Enabled = false;
+            //SpineSystem.Instance.Enabled = false;
+            //HeadsAndTailsSystem.Instance.Enabled = false;
             }
         }
 
@@ -489,8 +489,8 @@ namespace ew
         {
             int created = 0;
             BoidJobSystem.Instance.Enabled = true;
-            SpineSystem.Instance.Enabled = true;
-            HeadsAndTailsSystem.Instance.Enabled = true;
+            //SpineSystem.Instance.Enabled = true;
+            //HeadsAndTailsSystem.Instance.Enabled = true;
             while (created < numBoids)
             {
                 Vector3 pos = UnityEngine.Random.insideUnitSphere * radius;
@@ -522,8 +522,8 @@ namespace ew
                 return;
 
             BoidJobSystem.Instance.bootstrap = this;
-            SpineSystem.Instance.bootstrap = this;
-            HeadsAndTailsSystem.Instance.bootstrap = this;
+            //SpineSystem.Instance.bootstrap = this;
+            //HeadsAndTailsSystem.Instance.bootstrap = this;
 
             /*if (Input.GetAxis("DPadX") == -1)
             {

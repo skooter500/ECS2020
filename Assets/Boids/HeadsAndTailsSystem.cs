@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
@@ -22,6 +23,7 @@ namespace ew
         public int boidId;
         public int spineId;
     }
+    /*
 
     [BurstCompile]
     class HeadJob : SystemBase
@@ -144,6 +146,7 @@ namespace ew
 
             return tailJob.Schedule(this, headHandle);
         }
-
     }
+    */
 }
+
