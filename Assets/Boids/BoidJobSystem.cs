@@ -204,6 +204,8 @@ namespace ew
             return false;
         }
         NativeArray<int> neighbours;
+
+        [NativeDisableParallelForRestriction]
         public NativeArray<Vector3> positions;
         public NativeArray<Quaternion> rotations;
         public NativeArray<float> speeds;
@@ -237,8 +239,9 @@ namespace ew
         }
 
         protected override void OnUpdate()
-        {
+        {            
             NativeArray<int> neighbours = this.neighbours;
+            
             NativeArray<Vector3> positions = this.positions;
             NativeArray<Quaternion> rotations = this.rotations;
             NativeArray<float> speeds = this.speeds;
@@ -252,13 +255,18 @@ namespace ew
             Unity.Mathematics.Random ran = new Unity.Mathematics.Random((uint)UnityEngine.Random.Range(1, 100000));
 
             // Copy entities to the native arrays             
-            var ctjHandle = Entities.ForEach((ref Translation p, ref Rotation r, ref Boid b) =>
+            var ctjHandle = Entities
+            .WithNativeDisableParallelForRestriction(positions)
+            .WithNativeDisableParallelForRestriction(rotations)
+            .ForEach((ref Translation p, ref Rotation r, ref Boid b) =>
             {
                 positions[b.boidId] = p.Value;
-                rotations[b.boidId] = r.Value;
+                //rotations[b.boidId] = r.Value;
             })
             .ScheduleParallel(this.Dependency);
+            this.Dependency = ctjHandle;
 
+            /*
             var wjHandle = Entities.ForEach((ref Boid b, ref Wander w, ref Translation p, ref Rotation r) =>
             {
                 Vector3 disp = w.jitter * ran.NextFloat3Direction() * dT;
@@ -312,6 +320,7 @@ namespace ew
             .ScheduleParallel(boidHandle);
             Dependency = cfJobHandle;
             return;
+            */
         }
     }
 }

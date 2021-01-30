@@ -78,7 +78,7 @@ namespace ew
 
         public void OnDestroy()
         {
-            DestroyEntities();
+            //DestroyEntities();
             /*if (!isContainer)
             {
                 allTheBoids.Dispose();
@@ -93,15 +93,15 @@ namespace ew
             Debug.Log("Destroying all entities");
             if (!isContainer)
             {
-            entityManager.DestroyEntity(allTheBoids);
-            entityManager.DestroyEntity(allTheheadsAndTails);
-            entityManager.DestroyEntity(allTheSpines);
-            allTheBoids.Dispose();
-            allTheheadsAndTails.Dispose();
-            allTheSpines.Dispose();
-            BoidJobSystem.Instance.Enabled = false;
-            //SpineSystem.Instance.Enabled = false;
-            //HeadsAndTailsSystem.Instance.Enabled = false;
+                entityManager.DestroyEntity(allTheBoids);
+                entityManager.DestroyEntity(allTheheadsAndTails);
+                entityManager.DestroyEntity(allTheSpines);
+                allTheBoids.Dispose();
+                allTheheadsAndTails.Dispose();
+                allTheSpines.Dispose();
+                BoidJobSystem.Instance.Enabled = false;
+                //SpineSystem.Instance.Enabled = false;
+                //HeadsAndTailsSystem.Instance.Enabled = false;
             }
         }
 
@@ -275,7 +275,7 @@ namespace ew
             tailRotation.Value = q;
             s = new NonUniformScale
             {
-               Value = new Vector3(size * 0.2f, size * 0.1f, size)
+                Value = new Vector3(size * 0.2f, size * 0.1f, size)
             };
             //s.Value = new Vector3(2, 4, 10);
             entityManager.SetComponentData(tailEntity, s);
@@ -417,7 +417,7 @@ namespace ew
                 allTheheadsAndTails = new NativeArray<Entity>(numBoids * 2, Allocator.Persistent);
                 allTheSpines = new NativeArray<Entity>(numBoids * spineLength, Allocator.Persistent);
 
-                entityManager = World.DefaultGameObjectInjectionWorld.EntityManager; 
+                entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
 
                 constrainTranslation = transform.position;
                 Cursor.visible = false;
@@ -427,6 +427,8 @@ namespace ew
                     typeof(Translation),
                     typeof(Rotation),
                     typeof(NonUniformScale),
+                    typeof(LocalToWorld),
+                    typeof(RenderBounds),
                     typeof(Boid),
                     typeof(Seperation),
                     typeof(Cohesion),
@@ -443,6 +445,8 @@ namespace ew
                     typeof(Translation),
                     typeof(Rotation),
                     typeof(NonUniformScale),
+                    typeof(LocalToWorld),
+                    typeof(RenderBounds),
                     typeof(Head)
                     );
 
@@ -450,6 +454,8 @@ namespace ew
                             typeof(Translation),
                             typeof(Rotation),
                             typeof(NonUniformScale),
+                            typeof(LocalToWorld),
+                            typeof(RenderBounds),
                             typeof(Tail)
                             );
 
@@ -457,6 +463,8 @@ namespace ew
                         typeof(Translation),
                         typeof(Rotation),
                         typeof(NonUniformScale),
+                        typeof(LocalToWorld),
+                        typeof(RenderBounds),
                         typeof(Spine)
                         );
 
@@ -509,10 +517,10 @@ namespace ew
         public int cellSize = 50;
         public int gridSize = 10000;
         public bool usePartitioning = true;
-        
+
         Material boidMaterial;
 
-        public float colorSpeed = 100; 
+        public float colorSpeed = 100;
 
         public float colorAdd = 0;
 
@@ -540,7 +548,7 @@ namespace ew
 
             if (Input.GetAxis("DPadY") == -1)
             {
-                colorAdd = Mathf.Lerp(colorAdd, -colorSpeed, Time.deltaTime);                
+                colorAdd = Mathf.Lerp(colorAdd, -colorSpeed, Time.deltaTime);
             }
 
             if (Input.GetAxis("DPadY") == 1)
@@ -554,7 +562,7 @@ namespace ew
             //if (Input.GetKeyDown(KeyCode.Joystick1Button8))
             //{
             //    StartCoroutine(CreateBoids());
-                
+
             //}
             //if (Input.GetKeyDown(KeyCode.Joystick1Button9))
             //{
@@ -696,11 +704,11 @@ namespace ew
 
         public IEnumerator Show()
         {
-            while(true)
+            while (true)
             {
                 yield return new WaitForSeconds(30);
                 DoExplosion(1);
-                yield return new WaitForSeconds(UnityEngine.Random.Range(4,6));
+                yield return new WaitForSeconds(UnityEngine.Random.Range(4, 6));
                 int exp = UnityEngine.Random.Range(2, 10);
                 DoExplosion(exp);
                 Debug.Log(exp);
@@ -721,10 +729,10 @@ namespace ew
             {
 
                 Debug.Log(clickCount);
-                DoExplosion(clickCount);                
+                DoExplosion(clickCount);
                 clickCount = 0;
             }
-            
+
         }
     }
 }
