@@ -132,7 +132,7 @@ namespace ew
             return false;
         }
 
-        public Vector3 AccululateForces(ref Boid b, ref Seperation s, ref Alignment a, ref Cohesion c, ref Wander w, ref Constrain con)
+        public static Vector3 AccululateForces(ref Boid b, ref Seperation s, ref Alignment a, ref Cohesion c, ref Wander w, ref Constrain con)
         {
             Vector3 force = Vector3.zero;
 
@@ -270,9 +270,7 @@ namespace ew
                 rotations[b.boidId] = r.Value;
             })
             .ScheduleParallel(this.Dependency);
-            this.Dependency = ctjHandle;
-
-            /*
+                        
             var wjHandle = Entities.ForEach((ref Boid b, ref Wander w, ref Translation p, ref Rotation r) =>
             {
                 Vector3 disp = w.jitter * ran.NextFloat3Direction() * dT;
@@ -290,10 +288,14 @@ namespace ew
             .ScheduleParallel(ctjHandle);            
             // Integrate the forces
             
-            var boidHandle = Entities.ForEach((ref Boid b, ref Seperation s, ref Alignment a, ref Cohesion c, ref Wander w, ref Constrain con) =>
+            var boidHandle = Entities
+            .WithNativeDisableParallelForRestriction(positions)
+            .WithNativeDisableParallelForRestriction(rotations)
+            .WithNativeDisableParallelForRestriction(speeds)
+            .ForEach((ref Boid b, ref Seperation s, ref Alignment a, ref Cohesion c, ref Wander w, ref Constrain con) =>
             {
                 float banking = 0.1f;
-                //b.force = AccululateForces(ref b, ref s, ref a, ref c, ref w, ref con) * b.weight;
+                b.force = AccululateForces(ref b, ref s, ref a, ref c, ref w, ref con) * b.weight;
 
                 b.force = Vector3.ClampMagnitude(b.force, b.maxForce);
                 Vector3 newAcceleration = (b.force * b.weight) / b.mass;
@@ -312,21 +314,21 @@ namespace ew
 
                     positions[b.boidId] += b.velocity * dT;
                     b.velocity *= (1.0f - (bondDamping * dT));
-
                 }
-                b.force = Vector3.zero;
             })
             .ScheduleParallel(wjHandle);
-
-            var cfJobHandle = Entities.ForEach((ref Translation p, ref Rotation r, ref Boid b) =>
+            
+            var cfJobHandle = Entities
+            .WithNativeDisableParallelForRestriction(positions)
+            .WithNativeDisableParallelForRestriction(rotations)
+            .ForEach((ref Translation p, ref Rotation r, ref Boid b) =>
             {
-                positions[b.boidId] = p.Value;
-                rotations[b.boidId] = r.Value;
+                p.Value = positions[b.boidId];
+                r.Value = rotations[b.boidId];
             })
             .ScheduleParallel(boidHandle);
             Dependency = cfJobHandle;
             return;
-            */
         }
     }
 }
