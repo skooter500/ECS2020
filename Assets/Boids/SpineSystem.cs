@@ -15,77 +15,9 @@ namespace ew
         public int spineId;
         public Vector3 offset;
     }
-    /*
-
-    struct SpineJob : IJobProcessComponentData<Spine, Position, Rotation>
-    {
-        [NativeDisableParallelForRestriction]
-        public NativeArray<Vector3> positions;
-
-        [NativeDisableParallelForRestriction]
-        public NativeArray<Quaternion> rotations;
-
-        public float dT;
-        public float bondDamping;
-        public float angularBondDamping;
-
-        public void Execute(ref Spine s, ref Position p, ref Rotation r)
-        {
-            // Is it the root of a spine?
-            if (s.parent == -1)
-            {
-                return;
-            }
-            Vector3 wantedPosition = positions[s.parent] + rotations[s.parent] * s.offset;
-            //p.Value = Vector3.Lerp(p.Value, wantedPosition, bondDamping * dT);
-
-            // Clamp the distance
-            Vector3 lerpedPosition = Vector3.Lerp(p.Value, wantedPosition, bondDamping * dT);
-            Vector3 clampedOffset = lerpedPosition - positions[s.parent];
-            clampedOffset = Vector3.ClampMagnitude(clampedOffset, s.offset.magnitude);
-            //positions[s.spineId] = Vector3.Lerp(positions[s.spineId], wantedPosition, bondDamping * dT);
-            positions[s.spineId] = positions[s.parent] + clampedOffset;
-            Vector3 myPos = positions[s.spineId];
-            Quaternion wantedQuaternion = Quaternion.LookRotation(positions[s.parent] - myPos);
-            rotations[s.spineId] = Quaternion.Slerp(rotations[s.spineId], wantedQuaternion, angularBondDamping * dT);
-            //r.Value = Quaternion.Slerp(r.Value, wantedQuaternion, angularBondDamping * dT);
-        }
-    }
-
-    [BurstCompile]
-    struct CopyTransformsToSpineJob : IJobProcessComponentData<Position, Rotation, Spine>
-    {
-        [NativeDisableParallelForRestriction]
-        public NativeArray<Vector3> positions;
-        [NativeDisableParallelForRestriction]
-        public NativeArray<Quaternion> rotations;
-
-        public void Execute(ref Position p, ref Rotation r, ref Spine s)
-        {
-            positions[s.spineId] = p.Value;
-            rotations[s.spineId] = r.Value;
-        }
-
-    }
-
-    [BurstCompile]
-    struct CopyTransformsFromSpineJob : IJobProcessComponentData<Position, Rotation, Spine>
-    {
-        [NativeDisableParallelForRestriction]
-        public NativeArray<Vector3> positions;
-
-        [NativeDisableParallelForRestriction]
-        public NativeArray<Quaternion> rotations;
-
-        public void Execute(ref Position p, ref Rotation r, ref Spine s)
-        {
-            p.Value = positions[s.spineId];
-            r.Value = rotations[s.spineId];
-        }
-    }
-
+    
     [UpdateAfter(typeof(BoidJobSystem))]
-    public class SpineSystem : JobComponentSystem
+    public class SpineSystem : SystemBase
     {
         public BoidBootstrap bootstrap;
 
@@ -97,11 +29,9 @@ namespace ew
 
         public static SpineSystem Instance;
 
-        protected override void OnCreateManager()
+        protected override void OnCreate()
         {
             Instance = this;
-            base.OnCreateManager();
-
             bootstrap = GameObject.FindObjectOfType<BoidBootstrap>();
 
             positions = new NativeArray<Vector3>(MAX_SPINES, Allocator.Persistent);
@@ -111,47 +41,72 @@ namespace ew
             Enabled = false;
         }
 
-        protected override void OnDestroyManager()
+        protected override void OnDestroy()
         {
             positions.Dispose();
             rotations.Dispose();
         }
 
-
-        protected override JobHandle OnUpdate(JobHandle inputDeps)
+        protected override void OnUpdate()
         {
-            
+            NativeArray<Vector3> positions = this.positions;
+            NativeArray<Quaternion> rotations = this.rotations;
+            BoidBootstrap bootstrap = this.bootstrap;
+            float dT = Time.DeltaTime;
+            float bondDamping = bootstrap.bondDamping;
+            float angularBondDamping = bootstrap.angularDamping;
 
-            var ctj = new CopyTransformsToSpineJob()
+            var ctjHandle = Entities
+                .WithNativeDisableParallelForRestriction(positions)
+                .WithNativeDisableParallelForRestriction(rotations)
+                .ForEach((ref Translation p, ref Rotation r, ref Spine s) =>
             {
-                positions = this.positions,
-                rotations = this.rotations
-            };
-
-            var ctjHandle = ctj.Schedule(this, inputDeps);
-
-            var spineJob = new SpineJob()
+                positions[s.spineId] = p.Value;
+                rotations[s.spineId] = r.Value;
+            })
+            .ScheduleParallel(this.Dependency);
+        
+            var spineHandle = Entities
+                .WithNativeDisableParallelForRestriction(positions)
+                .WithNativeDisableParallelForRestriction(rotations)                
+                .ForEach((ref Spine s, ref Translation p, ref Rotation r) =>
             {
-                positions = this.positions,
-                rotations = this.rotations,
-                angularBondDamping = bootstrap.angularDamping,
-                bondDamping = bootstrap.bondDamping,
-                dT = Time.deltaTime
-            };
-            var spineHandle = spineJob.Schedule(this, ctjHandle);
+                // Is it the root of a spine?
+                if (s.parent == -1)
+                {
+                    return;
+                }
+                Vector3 wantedPosition = positions[s.parent] + rotations[s.parent] * s.offset;
+                //p.Value = Vector3.Lerp(p.Value, wantedPosition, bondDamping * dT);
 
-            var cfj = new CopyTransformsFromSpineJob()
+                // Clamp the distance
+                Vector3 lerpedPosition = Vector3.Lerp(p.Value, wantedPosition, bondDamping * dT);
+                Vector3 clampedOffset = lerpedPosition - positions[s.parent];
+                clampedOffset = Vector3.ClampMagnitude(clampedOffset, s.offset.magnitude);
+                //positions[s.spineId] = Vector3.Lerp(positions[s.spineId], wantedPosition, bondDamping * dT);
+                positions[s.spineId] = positions[s.parent] + clampedOffset;
+                Vector3 myPos = positions[s.spineId];
+                Quaternion wantedQuaternion = Quaternion.LookRotation(positions[s.parent] - myPos);
+                rotations[s.spineId] = Quaternion.Slerp(rotations[s.spineId], wantedQuaternion, angularBondDamping * dT);
+                //r.Value = Quaternion.Slerp(r.Value, wantedQuaternion, angularBondDamping * dT);
+            }
+            )
+            .ScheduleParallel(ctjHandle);
+
+            var cfJHandle = Entities
+                .WithNativeDisableParallelForRestriction(positions)
+                .WithNativeDisableParallelForRestriction(rotations)                
+                .ForEach((ref Translation p, ref Rotation r, ref Spine s) =>
             {
-                positions = this.positions,
-                rotations = this.rotations
-            };
-
-            return cfj.Schedule(this, spineHandle);
-            //return spineJob.Schedule(this, ctjHandle);
+                p.Value = positions[s.spineId];
+                r.Value = rotations[s.spineId];
+            }    
+            )
+            .ScheduleParallel(spineHandle);
+            this.Dependency = cfJHandle;
+            return;
         }
-
     }
-    */
 }
 
 
