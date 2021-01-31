@@ -73,7 +73,7 @@ namespace ew
         [NativeDisableParallelForRestriction]
         public NativeArray<Vector3> positions;
 
-        public NativeMultiHashMap<int, int>.ParallelWriter cells;
+        //public NativeMultiHashMap<int, int> cells;
         public bool threedcells;
         public int cellSize;
         public int gridSize;
@@ -103,7 +103,7 @@ namespace ew
             int cell = threedcells
                 ? PositionToCell3D(positions[i], cellSize, gridSize)
                 : PositionToCell(positions[i], cellSize, gridSize);
-            cells.Add(cell, i);
+            //cells.Add(cell, i);
         }
     }
 
@@ -216,6 +216,7 @@ namespace ew
         [NativeDisableParallelForRestriction]        
         public NativeArray<float> speeds;
 
+        [NativeDisableParallelForRestriction]        
         public NativeMultiHashMap<int, int> cells;
 
         int maxNeighbours = 100;
@@ -246,17 +247,27 @@ namespace ew
 
         protected override void OnUpdate()
         {            
-            NativeArray<int> neighbours = this.neighbours;
-            
+            // Copy to local variables. Required for the lambdas
+            NativeArray<int> neighbours = this.neighbours;            
             NativeArray<Vector3> positions = this.positions;
             NativeArray<Quaternion> rotations = this.rotations;
             NativeArray<float> speeds = this.speeds;
             BoidBootstrap bootstrap = this.bootstrap;
+            NativeMultiHashMap<int, int>.ParallelWriter paralellCells = this.cells.AsParallelWriter();
+            NativeMultiHashMap<int, int> cells = this.cells;
+
             float dT = Time.DeltaTime;
 
             float wanderWeight = bootstrap.wanderWeight;
             float limitUpAndDown = bootstrap.limitUpAndDown;
             float bondDamping = bootstrap.bondDamping;
+
+            float neighbourDistance = bootstrap.neighbourDistance;
+            int cellSize = bootstrap.cellSize;
+            bool usePartitioning = bootstrap.usePartitioning;
+            bool threedcells = bootstrap.threedcells;
+            int gridSize = bootstrap.gridSize;
+            int maxNeighbours = this.maxNeighbours;
 
             Unity.Mathematics.Random ran = new Unity.Mathematics.Random((uint)UnityEngine.Random.Range(1, 100000));
 
@@ -275,14 +286,85 @@ namespace ew
             var partitionJob = new PartitionSpaceJob()
             {
                 positions = this.positions,
-                cells = this.cells.AsParallelWriter(),
+                //cells = this.cells,
                 threedcells = bootstrap.threedcells,
                 cellSize = bootstrap.cellSize,
                 gridSize = bootstrap.gridSize
             };
 
             var partitionHandle = partitionJob.Schedule(bootstrap.numBoids, 50, ctjHandle);
+            
+            var cnjHandle = Entities
+                .WithNativeDisableParallelForRestriction(positions)
+                .WithNativeDisableParallelForRestriction(cells)
+                .WithNativeDisableParallelForRestriction(neighbours)
+                .ForEach((Boid b) =>
+            {
+                int neighbourStartIndex = maxNeighbours * b.boidId;
+                int neighbourCount = 0;
+                if (usePartitioning)
+                {
+                    int surroundingCellCount = (int)Mathf.Ceil(neighbourDistance / cellSize);
 
+                    // Are we looking above and below? 
+                    int sliceSurrounding = threedcells ? surroundingCellCount : 0;
+                    for (int slice = -sliceSurrounding; slice <= sliceSurrounding; slice++)
+                    {
+                        for (int row = -surroundingCellCount; row <= surroundingCellCount; row++)
+                        {
+                            for (int col = -surroundingCellCount; col <= surroundingCellCount; col++)
+                            {
+                                Vector3 pos = positions[b.boidId] + new Vector3(col * cellSize, slice * cellSize, row * cellSize);
+                                int cell = PartitionSpaceJob.PositionToCell(pos, cellSize, gridSize);
+
+                                NativeMultiHashMapIterator<int> iterator;
+                                int boidId;
+                                if (cells.TryGetFirstValue(cell, out boidId, out iterator))
+                                {
+                                    do
+                                    {
+                                        if (boidId != b.boidId)
+                                        {
+                                            if (Vector3.Distance(positions[b.boidId], positions[boidId]) < neighbourDistance)
+                                            {
+                                                neighbours[neighbourStartIndex + neighbourCount] = boidId;
+                                                neighbourCount++;
+                                                if (neighbourCount == maxNeighbours)
+                                                {
+                                                    b.taggedCount = neighbourCount;
+                                                    return;
+                                                }
+                                            }
+                                        }
+                                    } while (cells.TryGetNextValue(out boidId, ref iterator));
+                                }
+                            }
+                        }
+
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < positions.Length; i++)
+                    {
+                        if (i != b.boidId)
+                        {
+                            if (Vector3.Distance(positions[b.boidId], positions[i]) < neighbourDistance)
+                            {
+                                neighbours[neighbourStartIndex + neighbourCount] = i;
+                                neighbourCount++;
+                                if (neighbourCount == maxNeighbours)
+                                {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                b.taggedCount = neighbourCount;
+            }
+            )
+            .ScheduleParallel(partitionHandle);
                         
             var wjHandle = Entities.ForEach((ref Boid b, ref Wander w, ref Translation p, ref Rotation r) =>
             {
@@ -298,7 +380,7 @@ namespace ew
                 Vector3 worldTarget = (q * localTarget) + pos;
                 w.force = (worldTarget - pos) * wanderWeight;
             })
-            .ScheduleParallel(partitionHandle);            
+            .ScheduleParallel(cnjHandle);            
             // Integrate the forces
             
             var boidHandle = Entities
