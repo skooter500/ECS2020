@@ -270,6 +270,19 @@ namespace ew
                 rotations[b.boidId] = r.Value;
             })
             .ScheduleParallel(this.Dependency);
+
+            cells.Clear();
+            var partitionJob = new PartitionSpaceJob()
+            {
+                positions = this.positions,
+                cells = this.cells.AsParallelWriter(),
+                threedcells = bootstrap.threedcells,
+                cellSize = bootstrap.cellSize,
+                gridSize = bootstrap.gridSize
+            };
+
+            var partitionHandle = partitionJob.Schedule(bootstrap.numBoids, 50, ctjHandle);
+
                         
             var wjHandle = Entities.ForEach((ref Boid b, ref Wander w, ref Translation p, ref Rotation r) =>
             {
@@ -285,7 +298,7 @@ namespace ew
                 Vector3 worldTarget = (q * localTarget) + pos;
                 w.force = (worldTarget - pos) * wanderWeight;
             })
-            .ScheduleParallel(ctjHandle);            
+            .ScheduleParallel(partitionHandle);            
             // Integrate the forces
             
             var boidHandle = Entities
