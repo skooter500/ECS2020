@@ -268,6 +268,14 @@ namespace ew
             bool threedcells = bootstrap.threedcells;
             int gridSize = bootstrap.gridSize;
             int maxNeighbours = this.maxNeighbours;
+            int spineLength = bootstrap.spineLength;
+            int spineOffset = bootstrap.spineLength / 2;
+            float seperationWeight = bootstrap.seperationWeight;
+            float alignmentWeight = bootstrap.alignmentWeight;
+            float cohesionWeight = bootstrap.cohesionWeight;
+            float seekWeight = bootstrap.seekWeight;
+            float fleeWeight = bootstrap.fleeWeight;
+            float fleeDistance = bootstrap.fleeDistance;
 
             Unity.Mathematics.Random ran = new Unity.Mathematics.Random((uint)UnityEngine.Random.Range(1, 100000));
 
@@ -365,6 +373,70 @@ namespace ew
             }
             )
             .ScheduleParallel(partitionHandle);
+
+            var seperationHandle = Entities
+                .WithNativeDisableParallelForRestriction(positions)
+                .WithNativeDisableParallelForRestriction(neighbours)
+                .ForEach((ref Boid b, ref Seperation s) =>
+            {
+                Vector3 force = Vector3.zero;
+                int neighbourStartIndex = maxNeighbours * b.boidId;
+                int mySpineId = b.boidId * (spineLength + 1);
+                Vector3 myPosition = positions[mySpineId + spineOffset];
+                for (int i = 0; i < b.taggedCount; i++)
+                {
+                    int neighbourId = neighbours[neighbourStartIndex + i];
+                    if (neighbourId == b.boidId)
+                    {
+                        continue;
+                    }
+                    int neighbourSpineId = (neighbourId * (spineLength + 1)) + spineOffset;
+                    //Vector3 toNeighbour = positions[b.boidId] - positions[neighbourId];
+                    Vector3 toNeighbour = myPosition - positions[neighbourSpineId];
+                    float mag = toNeighbour.magnitude;
+                    //force += (Vector3.Normalize(toNeighbour) / mag);
+
+
+                    if (mag > 0) // Need this check otherwise this behaviour can return NAN
+                    {
+                        force += (Vector3.Normalize(toNeighbour) / mag);
+                    }
+                    else
+                    {
+                        // same position, so generate a random force
+                        Vector3 f = ran.NextFloat3Direction();
+                        force += f * b.maxForce;
+                    }
+
+                }
+                s.force = force * seperationWeight;
+            })
+            .ScheduleParallel(cnjHandle);
+
+
+            var cohesionHandle = Entities.ForEach((ref Boid b, ref Cohesion c) =>
+            {
+                Vector3 force = Vector3.zero;
+                Vector3 centerOfMass = Vector3.zero;
+                int neighbourStartIndex = maxNeighbours * b.boidId;
+                for (int i = 0; i < b.taggedCount; i++)
+                {
+                    int neighbourId = neighbours[neighbourStartIndex + i];
+                    centerOfMass += positions[neighbourId];
+                }
+                if (b.taggedCount > 0)
+                {
+                    centerOfMass /= b.taggedCount;
+                    // Generate a seek force
+                    Vector3 toTarget = centerOfMass - positions[b.boidId];
+                    Vector3 desired = toTarget.normalized * b.maxSpeed;
+                    force = (desired - b.velocity).normalized;
+                }
+
+                c.force = force * cohesionWeight;
+            })
+            .ScheduleParallel(seperationHandle);
+            
                         
             var wjHandle = Entities.ForEach((ref Boid b, ref Wander w, ref Translation p, ref Rotation r) =>
             {
@@ -380,7 +452,7 @@ namespace ew
                 Vector3 worldTarget = (q * localTarget) + pos;
                 w.force = (worldTarget - pos) * wanderWeight;
             })
-            .ScheduleParallel(cnjHandle);            
+            .ScheduleParallel(cohesionHandle);            
             // Integrate the forces
             
             var boidHandle = Entities
