@@ -66,52 +66,10 @@ namespace ew
         public Vector3 target;
     }
 
-    [BurstCompile]
-    struct PartitionSpaceJob : IJobParallelFor
-    {
-
-        [NativeDisableParallelForRestriction]
-        public NativeArray<Vector3> positions;
-
-        //public NativeMultiHashMap<int, int> cells;
-        public bool threedcells;
-        public int cellSize;
-        public int gridSize;
-
-        public static Vector3 CellToPosition(int cell, int cellSize, int gridSize)
-        {
-            int row = cell / gridSize;
-            int col = cell - (row * gridSize);
-
-            return new Vector3(col * cellSize, 0, row * cellSize);
-        }
-
-        public static int PositionToCell(Vector3 pos, int cellSize, int gridSize)
-        {
-            return ((int)(pos.x / cellSize))
-                + ((int)(pos.z / cellSize)) * gridSize;
-        }
-        public static int PositionToCell3D(Vector3 pos, int cellSize, int gridSize)
-        {
-            return ((int)(pos.x / cellSize))
-                + ((int)(pos.z / cellSize)) * gridSize
-                + ((int)(pos.y / cellSize)) * gridSize * gridSize;
-        }
-
-        public void Execute(int i)
-        {
-            int cell = threedcells
-                ? PositionToCell3D(positions[i], cellSize, gridSize)
-                : PositionToCell(positions[i], cellSize, gridSize);
-            //cells.Add(cell, i);
-        }
-    }
-
-
     public class BoidJobSystem : SystemBase
     {
         public static BoidJobSystem Instance;
-        
+
         [NativeDisableParallelForRestriction]
         NativeArray<int> neighbours;
 
@@ -203,9 +161,9 @@ namespace ew
             ComponentTypeHandle<Cohesion> cTHandle = GetComponentTypeHandle<Cohesion>();
             ComponentTypeHandle<Alignment> aTHandle = GetComponentTypeHandle<Alignment>();
             ComponentTypeHandle<Constrain> conTHandle = GetComponentTypeHandle<Constrain>();
-            
+
             float deltaTime = Time.DeltaTime;
-            
+
             Unity.Mathematics.Random random = new Unity.Mathematics.Random((uint)UnityEngine.Random.Range(1, 100000));
 
             // Copy entities to the native arrays             
@@ -219,9 +177,28 @@ namespace ew
             };
 
             var copyToNativeHandle = copyToNativeJob.ScheduleParallel(translationsRotationsQuery, 1, Dependency);
-
             Dependency = JobHandle.CombineDependencies(Dependency, copyToNativeHandle);
-            
+
+            var countNeighbourJob = new CountNeighboursJob()
+            {
+                positions = this.positions,
+                rotations = this.rotations,
+                neighbours = this.neighbours,
+                maxNeighbours = bootstrap.totalNeighbours,
+                cells = this.cells,
+                cellSize = bootstrap.cellSize,
+                gridSize = bootstrap.gridSize,
+                usePartitioning = bootstrap.usePartitioning,
+                neighbourDistance = bootstrap.neighbourDistance,
+                boidTypeHandle = bTHandle,
+                translationTypeHandle = ttTHandle,
+                rotationTypeHandle = rTHandle
+
+            };
+            var cnjHandle = countNeighbourJob.ScheduleParallel(translationsRotationsQuery, 1, Dependency);
+            Dependency = JobHandle.CombineDependencies(Dependency, cnjHandle);
+
+
             var wanderJob = new WanderJob()
             {
                 wanderTypeHandle = wTHandle,
@@ -355,7 +332,7 @@ namespace ew
                 force = Vector3.ClampMagnitude(force, b.maxForce);
                 return force;
             }
-            
+
             return force;
         }
 
@@ -381,19 +358,19 @@ namespace ew
                 Cohesion c = cohesionChunk[i];
                 Alignment a = alignmentChunk[i];
                 Constrain con = constrainChunk[i];
-                
-                b.force = AccululateForces(ref b, ref s, ref a, ref c, ref w, ref con)* b.weight;
+
+                b.force = AccululateForces(ref b, ref s, ref a, ref c, ref w, ref con) * b.weight;
 
                 b.force = Vector3.ClampMagnitude(b.force, b.maxForce);
-                Vector3 newAcceleration = (b.force * b.weight) *   (1.0f/ b.mass);
-                newAcceleration.y *= limitUpAndDown;                
+                Vector3 newAcceleration = (b.force * b.weight) * (1.0f / b.mass);
+                newAcceleration.y *= limitUpAndDown;
                 b.acceleration = Vector3.Lerp(b.acceleration, newAcceleration, dT);
                 b.velocity += b.acceleration * dT;
                 b.velocity = Vector3.ClampMagnitude(b.velocity, b.maxSpeed);
-                
+
                 float speed = b.velocity.magnitude;
                 speeds[b.boidId] = speed;
-                
+
                 if (speed > 0)
                 {
                     Vector3 tempUp = Vector3.Lerp(b.up, (Vector3.up) + (b.acceleration * banking), dT * 3.0f);
@@ -444,9 +421,6 @@ namespace ew
                 Quaternion q = r.Value;
                 Vector3 pos = p.Value;
                 Vector3 worldTarget = (q * localTarget) + pos;
-                //Debug.Log(worldTarget + "\t" + pos + "\t" + localTarget + "\t" + w.distance + "\t" + w.target + "\t" + w.jitter);
-                Debug.Log(p.Value);
-
                 w.force = (worldTarget - pos) * weight;
                 wanderChunk[i] = w;
             }
@@ -514,7 +488,158 @@ namespace ew
                 translationsChunk[i] = p;
                 rotationsChunk[i] = r;
             }
-        }        
+        }
+    }
+
+
+    [BurstCompile]
+    struct CountNeighboursJob : IJobEntityBatch
+    {
+        [NativeDisableParallelForRestriction]
+        public NativeArray<int> neighbours;
+
+        [NativeDisableParallelForRestriction]
+        public NativeArray<Vector3> positions;
+
+        [NativeDisableParallelForRestriction]
+        public NativeArray<Quaternion> rotations;
+
+        [ReadOnly] public ComponentTypeHandle<Boid> boidTypeHandle;
+        [ReadOnly] public ComponentTypeHandle<Translation> translationTypeHandle;
+        [ReadOnly] public ComponentTypeHandle<Rotation> rotationTypeHandle;
+
+        [ReadOnly] public NativeMultiHashMap<int, int> cells;
+        public float neighbourDistance;
+        public int maxNeighbours;
+
+        public int cellSize;
+        public int gridSize;
+        public bool threedcells;
+
+        public bool usePartitioning;
+
+
+        public void Execute(ArchetypeChunk batchInChunk, int batchIndex)
+        {
+            var boidChunk = batchInChunk.GetNativeArray(boidTypeHandle);
+            var translationsChunk = batchInChunk.GetNativeArray(translationTypeHandle);
+            var rotationsChunk = batchInChunk.GetNativeArray(rotationTypeHandle);
+
+
+            for (int i = 0; i < batchInChunk.Count; i++)
+            {
+                Translation p = translationsChunk[i];
+                Rotation r = rotationsChunk[i];
+                Boid b = boidChunk[i];
+                int neighbourStartIndex = maxNeighbours * b.boidId;
+                int neighbourCount = 0;
+
+
+                if (usePartitioning)
+                {
+                    /*
+                    int surroundingCellCount = (int)Mathf.Ceil(neighbourDistance / cellSize);
+
+                    // Are we looking above and below? 
+                    int sliceSurrounding = threedcells ? surroundingCellCount : 0;
+                    for (int slice = -sliceSurrounding; slice <= sliceSurrounding; slice++)
+                    {
+                        for (int row = -surroundingCellCount; row <= surroundingCellCount; row++)
+                        {
+                            for (int col = -surroundingCellCount; col <= surroundingCellCount; col++)
+                            {
+                                Vector3 pos = positions[b.boidId] + new Vector3(col * cellSize, slice * cellSize, row * cellSize);
+                                int cell = PartitionSpaceJob.PositionToCell(pos, cellSize, gridSize);
+
+                                NativeMultiHashMapIterator<int> iterator;
+                                int boidId;
+                                if (cells.TryGetFirstValue(cell, out boidId, out iterator))
+                                {
+                                    do
+                                    {
+                                        if (boidId != b.boidId)
+                                        {
+                                            if (Vector3.Distance(positions[b.boidId], positions[boidId]) < neighbourDistance)
+                                            {
+                                                neighbours[neighbourStartIndex + neighbourCount] = boidId;
+                                                neighbourCount++;
+                                                if (neighbourCount == maxNeighbours)
+                                                {
+                                                    b.taggedCount = neighbourCount;
+                                                    return;
+                                                }
+                                            }
+                                        }
+                                    } while (cells.TryGetNextValue(out boidId, ref iterator));
+                                }
+                            }
+                        }
+
+                    }
+                    */
+                }
+                else
+                {
+                    for (int j = 0; i < positions.Length; i++)
+                    {
+                        if (j != b.boidId)
+                        {
+                            if (Vector3.Distance(positions[b.boidId], positions[j]) < neighbourDistance)
+                            {
+                                neighbours[neighbourStartIndex + neighbourCount] = i;
+                                neighbourCount++;
+                                if (neighbourCount == maxNeighbours)
+                                {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                b.taggedCount = neighbourCount;
+            }
+        }
+    }
+
+    [BurstCompile]
+    struct PartitionSpaceJob : IJobParallelFor
+    {
+
+        [NativeDisableParallelForRestriction]
+        public NativeArray<Vector3> positions;
+
+        public NativeMultiHashMap<int, int>.ParallelWriter cells;
+        public bool threedcells;
+        public int cellSize;
+        public int gridSize;
+
+        public static Vector3 CellToPosition(int cell, int cellSize, int gridSize)
+        {
+            int row = cell / gridSize;
+            int col = cell - (row * gridSize);
+
+            return new Vector3(col * cellSize, 0, row * cellSize);
+        }
+
+        public static int PositionToCell(Vector3 pos, int cellSize, int gridSize)
+        {
+            return ((int)(pos.x / cellSize))
+                + ((int)(pos.z / cellSize)) * gridSize;
+        }
+        public static int PositionToCell3D(Vector3 pos, int cellSize, int gridSize)
+        {
+            return ((int)(pos.x / cellSize))
+                + ((int)(pos.z / cellSize)) * gridSize
+                + ((int)(pos.y / cellSize)) * gridSize * gridSize;
+        }
+
+        public void Execute(int i)
+        {
+            int cell = threedcells
+                ? PositionToCell3D(positions[i], cellSize, gridSize)
+                : PositionToCell(positions[i], cellSize, gridSize);
+            cells.Add(cell, i);
+        }
     }
 }
 
