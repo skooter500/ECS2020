@@ -131,8 +131,208 @@ namespace ew
             }
             return false;
         }
+    
+        static public bool checkNaN(Vector3 v)
+        {
+            if (float.IsNaN(v.x) || float.IsInfinity(v.x))
+            {
+                return true;
+            }
+            if (float.IsNaN(v.y) || float.IsInfinity(v.y))
+            {
+                return true;
+            }
+            if (float.IsNaN(v.z) || float.IsInfinity(v.z))
+            {
+                return true;
+            }
+            return false;
+        }
 
-        public static Vector3 AccululateForces(ref Boid b, ref Seperation s, ref Alignment a, ref Cohesion c, ref Wander w, ref Constrain con)
+        [NativeDisableParallelForRestriction]
+        NativeArray<int> neighbours;
+
+        [NativeDisableParallelForRestriction]
+        public NativeArray<Vector3> positions;
+
+        [NativeDisableParallelForRestriction]
+        public NativeArray<Quaternion> rotations;
+
+        [NativeDisableParallelForRestriction]
+        public NativeArray<float> speeds;
+
+        [NativeDisableParallelForRestriction]
+        public NativeMultiHashMap<int, int> cells;
+
+        int maxNeighbours = 100;
+
+        public BoidBootstrap bootstrap;
+
+        EntityQuery translationsRotationsQuery;
+        EntityQuery wanderQuery;
+        EntityQuery boidQuery;
+
+
+        protected override void OnCreate()
+        {
+            Instance = this;
+            bootstrap = GameObject.FindObjectOfType<BoidBootstrap>();
+            Enabled = false;
+            neighbours = new NativeArray<int>(BoidBootstrap.MAX_BOIDS * BoidBootstrap.MAX_NEIGHBOURS, Allocator.Persistent);
+            positions = new NativeArray<Vector3>(BoidBootstrap.MAX_BOIDS, Allocator.Persistent);
+            rotations = new NativeArray<Quaternion>(BoidBootstrap.MAX_BOIDS, Allocator.Persistent);
+            speeds = new NativeArray<float>(BoidBootstrap.MAX_BOIDS, Allocator.Persistent); // Needed for the animations
+            cells = new NativeMultiHashMap<int, int>(BoidBootstrap.MAX_BOIDS, Allocator.Persistent);
+
+            translationsRotationsQuery = GetEntityQuery(new EntityQueryDesc()
+            {
+                All = new ComponentType[] {
+                    ComponentType.ReadOnly<Translation>(),
+                    ComponentType.ReadOnly<Rotation>()
+                }
+            });
+
+            wanderQuery = GetEntityQuery(new EntityQueryDesc()
+            {
+                All = new ComponentType[] {
+                    ComponentType.ReadOnly<Translation>(),
+                    ComponentType.ReadOnly<Rotation>(),
+                    ComponentType.ReadOnly<Boid>(),
+                    ComponentType.ReadOnly<Wander>()
+                }
+            });
+
+            boidQuery = GetEntityQuery(new EntityQueryDesc()
+            {
+                All = new ComponentType[] {
+                    ComponentType.ReadOnly<Translation>(),
+                    ComponentType.ReadOnly<Rotation>(),
+                    ComponentType.ReadOnly<Boid>(),
+                    ComponentType.ReadOnly<Wander>(),
+                    ComponentType.ReadOnly<Seperation>(),
+                    ComponentType.ReadOnly<Alignment>(),
+                    ComponentType.ReadOnly<Cohesion>(),
+                    ComponentType.ReadOnly<Constrain>()
+                }
+            });
+        }
+
+        protected override void OnDestroy()
+        {
+            neighbours.Dispose();
+            positions.Dispose();
+            rotations.Dispose();
+            speeds.Dispose();
+            cells.Dispose();
+        }
+
+        protected override void OnUpdate()
+        {
+            BoidBootstrap bootstrap = this.bootstrap;
+
+            ComponentTypeHandle<Wander> wTHandle = GetComponentTypeHandle<Wander>();
+            ComponentTypeHandle<Boid> bTHandle = GetComponentTypeHandle<Boid>();
+            ComponentTypeHandle<Translation> ttTHandle = GetComponentTypeHandle<Translation>();
+            ComponentTypeHandle<Rotation> rTHandle = GetComponentTypeHandle<Rotation>();
+            ComponentTypeHandle<Seperation> sTHandle = GetComponentTypeHandle<Seperation>();
+            ComponentTypeHandle<Cohesion> cTHandle = GetComponentTypeHandle<Cohesion>();
+            ComponentTypeHandle<Alignment> aTHandle = GetComponentTypeHandle<Alignment>();
+            ComponentTypeHandle<Constrain> conTHandle = GetComponentTypeHandle<Constrain>();
+            
+            float deltaTime = Time.DeltaTime;
+            
+            Unity.Mathematics.Random ran = new Unity.Mathematics.Random((uint)UnityEngine.Random.Range(1, 100000));
+
+            // Copy entities to the native arrays             
+            var copyToNativeJob = new CopyTransformsToJob()
+            {
+                positions = this.positions,
+                rotations = this.rotations,
+                boidTypeHandle = bTHandle,
+                translationTypeHandle = ttTHandle,
+                rotationTypeHandle = rTHandle
+            };
+
+            var copyToNativeHandle = copyToNativeJob.ScheduleParallel(translationsRotationsQuery, 1, Dependency);
+
+            Dependency = JobHandle.CombineDependencies(Dependency, copyToNativeHandle);
+            
+            var wanderJob = new WanderJob()
+            {
+                wanderTypeHandle = wTHandle,
+                translationTypeHandle = ttTHandle,
+                rotationTypeHandle = rTHandle,
+                boidTypeHandle = bTHandle,
+                dT = deltaTime,
+                weight = bootstrap.wanderWeight
+            };
+
+            var wanderJobHandle = wanderJob.ScheduleParallel(wanderQuery, 1, Dependency);
+            Dependency = JobHandle.CombineDependencies(Dependency, wanderJobHandle);
+
+            var boidJob = new BoidJob()
+            {
+                positions = this.positions,
+                rotations = this.rotations,
+                dT = deltaTime,
+                wanderTypeHandle = wTHandle,
+                boidTypeHandle = bTHandle,
+                translationTypeHandle = ttTHandle,
+                seperationTypeHandle = sTHandle,
+                cohesionTypeHandle = cTHandle,
+                alignmentTypeHandle = aTHandle,
+                constrainTypeHandle = conTHandle
+            };
+
+            var boidJobHandle = boidJob.ScheduleParallel(boidQuery, 1, Dependency);
+            Dependency = JobHandle.CombineDependencies(Dependency, boidJobHandle);
+
+            var copyFromNativeJob = new CopyTransformsFromJob()
+            {
+                positions = this.positions,
+                rotations = this.rotations,
+                boidTypeHandle = bTHandle,
+                translationTypeHandle = ttTHandle,
+                rotationTypeHandle = rTHandle
+            };
+
+            var copyFromNativeHandle = copyFromNativeJob.ScheduleParallel(translationsRotationsQuery, 1, Dependency);
+
+            Dependency = JobHandle.CombineDependencies(Dependency, copyFromNativeHandle);
+
+            return;
+        }
+    }
+
+    [BurstCompile]
+    struct BoidJob : IJobEntityBatch
+    {
+        [NativeDisableParallelForRestriction]
+        public NativeArray<Vector3> positions;
+
+        [NativeDisableParallelForRestriction]
+        public NativeArray<Quaternion> rotations;
+
+        [NativeDisableParallelForRestriction]
+        public NativeArray<float> speeds;
+
+        public float damping;
+        public float banking;
+        public float limitUpAndDown;
+
+        public float dT;
+
+        [ReadOnly] public ComponentTypeHandle<Wander> wanderTypeHandle;
+        [ReadOnly] public ComponentTypeHandle<Seperation> seperationTypeHandle;
+        [ReadOnly] public ComponentTypeHandle<Alignment> alignmentTypeHandle;
+        [ReadOnly] public ComponentTypeHandle<Cohesion> cohesionTypeHandle;
+        [ReadOnly] public ComponentTypeHandle<Constrain> constrainTypeHandle;
+        [ReadOnly] public ComponentTypeHandle<Boid> boidTypeHandle;
+        [ReadOnly] public ComponentTypeHandle<Translation> translationTypeHandle;
+        [ReadOnly] public ComponentTypeHandle<Rotation> rotationTypeHandle;
+
+
+        public Vector3 AccululateForces(ref Boid b, ref Seperation s, ref Alignment a, ref Cohesion c, ref Wander w, ref Constrain con)
         {
             Vector3 force = Vector3.zero;
 
@@ -184,150 +384,60 @@ namespace ew
                 force = Vector3.ClampMagnitude(force, b.maxForce);
                 return force;
             }
+            
             return force;
         }
 
-        static public bool checkNaN(Vector3 v)
+        public void Execute(ArchetypeChunk batchInChunk, int batchIndex)
         {
-            if (float.IsNaN(v.x) || float.IsInfinity(v.x))
+            var wanderChunk = batchInChunk.GetNativeArray(wanderTypeHandle);
+            var boidChunk = batchInChunk.GetNativeArray(boidTypeHandle);
+            var translationsChunk = batchInChunk.GetNativeArray(translationTypeHandle);
+            var rotationsChunk = batchInChunk.GetNativeArray(rotationTypeHandle);
+            var seperationChunk = batchInChunk.GetNativeArray(seperationTypeHandle);
+            var cohesionChunk = batchInChunk.GetNativeArray(cohesionTypeHandle);
+            var alignmentChunk = batchInChunk.GetNativeArray(alignmentTypeHandle);
+            var constrainChunk = batchInChunk.GetNativeArray(constrainTypeHandle);
+
+            for (int i = 0; i < batchInChunk.Count; i++)
             {
-                return true;
+
+                Wander w = wanderChunk[i];
+                Translation p = translationsChunk[i];
+                Rotation r = rotationsChunk[i];
+                Boid b = boidChunk[i];
+                Seperation s = seperationChunk[i];
+                Cohesion c = cohesionChunk[i];
+                Alignment a = alignmentChunk[i];
+                Constrain con = constrainChunk[i];
+
+
+                b.force = AccululateForces(ref b, ref s, ref a, ref c, ref w, ref con) * b.weight;
+
+                b.force = Vector3.ClampMagnitude(b.force, b.maxForce);
+                Vector3 newAcceleration = (b.force * b.weight) / b.mass;
+                newAcceleration.y *= limitUpAndDown;
+                b.acceleration = Vector3.Lerp(b.acceleration, newAcceleration, dT);
+                b.velocity += b.acceleration * dT;
+                b.velocity = Vector3.ClampMagnitude(b.velocity, b.maxSpeed);
+                //b.velocity.y *= 0.8f;
+                float speed = b.velocity.magnitude;
+                speeds[b.boidId] = speed;
+                if (speed > 0)
+                {
+                    Vector3 tempUp = Vector3.Lerp(b.up, (Vector3.up) + (b.acceleration * banking), dT * 3.0f);
+                    rotations[b.boidId] = Quaternion.LookRotation(b.velocity, tempUp);
+                    b.up = rotations[b.boidId] * Vector3.up;
+
+                    positions[b.boidId] += b.velocity * dT;
+                    b.velocity *= (1.0f - (damping * dT));
+
+                }
+                b.force = Vector3.zero;
+                boidChunk[i] = b;
             }
-            if (float.IsNaN(v.y) || float.IsInfinity(v.y))
-            {
-                return true;
-            }
-            if (float.IsNaN(v.z) || float.IsInfinity(v.z))
-            {
-                return true;
-            }
-            return false;
-        }
-
-        [NativeDisableParallelForRestriction]
-        NativeArray<int> neighbours;
-
-        [NativeDisableParallelForRestriction]
-        public NativeArray<Vector3> positions;
-
-        [NativeDisableParallelForRestriction]
-        public NativeArray<Quaternion> rotations;
-
-        [NativeDisableParallelForRestriction]
-        public NativeArray<float> speeds;
-
-        [NativeDisableParallelForRestriction]
-        public NativeMultiHashMap<int, int> cells;
-
-        int maxNeighbours = 100;
-
-        public BoidBootstrap bootstrap;
-
-        protected override void OnCreate()
-        {
-            Instance = this;
-            bootstrap = GameObject.FindObjectOfType<BoidBootstrap>();
-            Enabled = false;
-            neighbours = new NativeArray<int>(BoidBootstrap.MAX_BOIDS * BoidBootstrap.MAX_NEIGHBOURS, Allocator.Persistent);
-            positions = new NativeArray<Vector3>(BoidBootstrap.MAX_BOIDS, Allocator.Persistent);
-            rotations = new NativeArray<Quaternion>(BoidBootstrap.MAX_BOIDS, Allocator.Persistent);
-            speeds = new NativeArray<float>(BoidBootstrap.MAX_BOIDS, Allocator.Persistent); // Needed for the animations
-            cells = new NativeMultiHashMap<int, int>(BoidBootstrap.MAX_BOIDS, Allocator.Persistent);
-        }
-
-        protected override void OnDestroy()
-        {
-            neighbours.Dispose();
-            positions.Dispose();
-            rotations.Dispose();
-            speeds.Dispose();
-            cells.Dispose();
-        }
-
-        protected override void OnUpdate()
-        {
-            BoidBootstrap bootstrap = this.bootstrap;
-
-            ComponentTypeHandle<Wander> wTHandle = GetComponentTypeHandle<Wander>();
-            ComponentTypeHandle<Boid> bTHandle = GetComponentTypeHandle<Boid>();
-            ComponentTypeHandle<Translation> ttTHandle = GetComponentTypeHandle<Translation>();
-            ComponentTypeHandle<Rotation> rTHandle = GetComponentTypeHandle<Rotation>();
-
-            float deltaTime = Time.DeltaTime;
-            
-            Unity.Mathematics.Random ran = new Unity.Mathematics.Random((uint)UnityEngine.Random.Range(1, 100000));
-
-            // Copy entities to the native arrays             
-            var copyToNativeHandle = Entities
-                .WithNativeDisableParallelForRestriction(positions)
-                .WithNativeDisableParallelForRestriction(rotations)
-                .ForEach((ref Translation p, ref Rotation r, ref Boid b) =>
-            {
-                positions[b.boidId] = p.Value;
-                rotations[b.boidId] = r.Value;
-            })
-            .ScheduleParallel(this.Dependency);
-
-            Dependency = JobHandle.CombineDependencies(Dependency, copyToNativeHandle);
-            
-            var wanderJob = new WanderJob()
-            {
-                wanderTypeHandle = wTHandle,
-                translationTypeHandle = ttTHandle,
-                rotationTypeHandle = rTHandle,
-                boidTypeHandle = bTHandle,
-                dT = deltaTime,
-                weight = bootstrap.wanderWeight
-            };
-
-            var wanderJobHandle = wanderJob.ScheduleParallel(wanderQuery, 1, Dependency);
-            Dependency = JobHandle.CombineDependencies(Dependency, wanderJobHandle);
-                    
-            var cfJobHandle = Entities
-            .WithNativeDisableParallelForRestriction(positions)
-            .WithNativeDisableParallelForRestriction(rotations)
-            .ForEach((ref Translation p, ref Rotation r, ref Boid b) =>
-            {
-                p.Value = positions[b.boidId];
-                r.Value = rotations[b.boidId];
-            })
-            .ScheduleParallel(boidHandle);
-            Dependency = JobHandle.CombineDependencies(Dependency, cfJobHandle);            
-            return;
         }
     }
-
-    [BurstCompile]
-        struct CopyTransformsToJob : IJobProcessComponentData<Position, Rotation, Boid>
-        {
-            [NativeDisableParallelForRestriction]
-            public NativeArray<Vector3> positions;
-            [NativeDisableParallelForRestriction]
-            public NativeArray<Quaternion> rotations;
-
-            public void Execute(ref Position p, ref Rotation r, ref Boid b)
-            {
-                positions[b.boidId] = p.Value;
-                rotations[b.boidId] = r.Value;
-            }
-
-        }
-
-        [BurstCompile]
-        struct CopyTransformsFromJob : IJobEntityBatch
-        {
-            [NativeDisableParallelForRestriction]
-            public NativeArray<Vector3> positions;
-
-            [NativeDisableParallelForRestriction]
-            public NativeArray<Quaternion> rotations;
-
-            public void Execute()
-            {
-                p.Value = positions[b.boidId];
-                r.Value = rotations[b.boidId];
-            }
-        }
 
     struct WanderJob : IJobEntityBatch
     {
@@ -367,6 +477,70 @@ namespace ew
                 wanderChunk[i] = w;
             }
         }
+    }
+
+    [BurstCompile]
+    struct CopyTransformsToJob : IJobEntityBatch
+    {
+        [NativeDisableParallelForRestriction]
+        public NativeArray<Vector3> positions;
+        [NativeDisableParallelForRestriction]
+        public NativeArray<Quaternion> rotations;
+
+        [ReadOnly] public ComponentTypeHandle<Boid> boidTypeHandle;
+        [ReadOnly] public ComponentTypeHandle<Translation> translationTypeHandle;
+        [ReadOnly] public ComponentTypeHandle<Rotation> rotationTypeHandle;
+
+
+        public void Execute(ArchetypeChunk batchInChunk, int batchIndex)
+        {
+            var boidChunk = batchInChunk.GetNativeArray(boidTypeHandle);
+            var translationsChunk = batchInChunk.GetNativeArray(translationTypeHandle);
+            var rotationsChunk = batchInChunk.GetNativeArray(rotationTypeHandle);
+
+            for (int i = 0; i < batchInChunk.Count; i++)
+            {
+
+                Translation p = translationsChunk[i];
+                Rotation r = rotationsChunk[i];
+                Boid b = boidChunk[i];
+                positions[b.boidId] = p.Value;
+                rotations[b.boidId] = r.Value;
+            }
+        }
+    }
+
+    [BurstCompile]
+    struct CopyTransformsFromJob : IJobEntityBatch
+    {
+        [NativeDisableParallelForRestriction]
+        public NativeArray<Vector3> positions;
+
+        [NativeDisableParallelForRestriction]
+        public NativeArray<Quaternion> rotations;
+
+        [ReadOnly] public ComponentTypeHandle<Boid> boidTypeHandle;
+        [ReadOnly] public ComponentTypeHandle<Translation> translationTypeHandle;
+        [ReadOnly] public ComponentTypeHandle<Rotation> rotationTypeHandle;
+
+        public void Execute(ArchetypeChunk batchInChunk, int batchIndex)
+        {
+            var boidChunk = batchInChunk.GetNativeArray(boidTypeHandle);
+            var translationsChunk = batchInChunk.GetNativeArray(translationTypeHandle);
+            var rotationsChunk = batchInChunk.GetNativeArray(rotationTypeHandle);
+
+            for (int i = 0; i < batchInChunk.Count; i++)
+            {
+
+                Translation p = translationsChunk[i];
+                Rotation r = rotationsChunk[i];
+                Boid b = boidChunk[i];
+                p.Value = positions[b.boidId];
+                r.Value = rotations[b.boidId];
+                translationsChunk[i] = p;
+                rotationsChunk[i] = r;
+            }
+        }        
     }
 }
 
