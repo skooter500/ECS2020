@@ -317,15 +317,14 @@ namespace ew
             entityManager.SetComponentData(boidEntity, new Cohesion());
             entityManager.SetComponentData(boidEntity, new Constrain());
             entityManager.SetComponentData(boidEntity, new Flee());
-            /*entityManager.SetComponentData(boidEntity, new Wander()
+            entityManager.SetComponentData(boidEntity, new Wander()
             {
                 distance = 2
                 ,
                 radius = 1.2f,
                 jitter = 80,
                 target = UnityEngine.Random.insideUnitSphere * 1.2f
-            });            
-            */
+            });                        
             entityManager.SetComponentData(boidEntity, new Spine() { parent = -1, spineId = (spineLength + 1) * boidId });
 
             entityManager.AddSharedComponentData(boidEntity, bodyMesh);

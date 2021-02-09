@@ -253,7 +253,6 @@ namespace ew
                 neighbours = this.neighbours,
                 weight = bootstrap.cohesionWeight,
                 cohesionTypeHandle = cTHandle,
-                translationTypeHandle = ttTHandle,
                 boidTypeHandle = bTHandle,
             };
 
@@ -262,7 +261,7 @@ namespace ew
 
             var alignmentJob = new AlignmentJob()
             {
-                positions = this.positions,
+                rotations = this.rotations,
                 maxNeighbours = this.maxNeighbours,
                 neighbours = this.neighbours,
                 weight = bootstrap.alignmentWeight,
@@ -333,7 +332,6 @@ namespace ew
     struct CohesionJob : IJobEntityBatch
     {
         [ReadOnly] public ComponentTypeHandle<Boid> boidTypeHandle;
-        [ReadOnly] public ComponentTypeHandle<Translation> translationTypeHandle;
         public ComponentTypeHandle<Cohesion> cohesionTypeHandle;
 
         [ReadOnly]
@@ -348,19 +346,18 @@ namespace ew
         public void Execute(ArchetypeChunk batchInChunk, int batchIndex)
         {
             var boidChunk = batchInChunk.GetNativeArray(boidTypeHandle);
-            var translationsChunk = batchInChunk.GetNativeArray(translationTypeHandle);
             var cohesionChunk = batchInChunk.GetNativeArray(cohesionTypeHandle);
 
             Vector3 force = Vector3.zero;
             Vector3 centerOfMass = Vector3.zero;
-            int neighbourStartIndex = maxNeighbours * b.boidId;
+
             for (int i = 0; i < batchInChunk.Count; i++)
             {
-                Translation p = translationsChunk[i];
                 Cohesion c = cohesionChunk[i];
                 Boid b = boidChunk[i];
+                int neighbourStartIndex = maxNeighbours * b.boidId;
 
-                for (int j = 0; i < b.taggedCount; j++)
+                for (int j = 0; j < b.taggedCount; j++)
                 {
                     int neighbourId = neighbours[neighbourStartIndex + j];
                     centerOfMass += positions[neighbourId];
@@ -385,14 +382,10 @@ namespace ew
     {
 
         [ReadOnly] public ComponentTypeHandle<Boid> boidTypeHandle;
-        [ReadOnly] public ComponentTypeHandle<Translation> translationTypeHandle;
         public ComponentTypeHandle<Alignment> alignmentTypeHandle;
 
         [ReadOnly]
         public NativeArray<int> neighbours;
-
-        [NativeDisableParallelForRestriction]
-        public NativeArray<Vector3> positions;
 
         [NativeDisableParallelForRestriction]
         public NativeArray<Quaternion> rotations;
@@ -403,12 +396,10 @@ namespace ew
         {
 
             var boidChunk = batchInChunk.GetNativeArray(boidTypeHandle);
-            var translationsChunk = batchInChunk.GetNativeArray(translationTypeHandle);
             var alignmentChunk = batchInChunk.GetNativeArray(alignmentTypeHandle);
 
             for (int i = 0; i < batchInChunk.Count; i++)
             {
-                Translation p = translationsChunk[i];
                 Alignment a = alignmentChunk[i];
                 Boid b = boidChunk[i];
 

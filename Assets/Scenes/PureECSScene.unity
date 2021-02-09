@@ -591,10 +591,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   material: {fileID: 2100000, guid: b8a4f5c47e7c2ab4c91d9ee24d9a4214, type: 2}
-  seperationWeight: 10
-  cohesionWeight: 2
+  seperationWeight: 0
+  cohesionWeight: 0
   alignmentWeight: 1
-  wanderWeight: 1
+  wanderWeight: 0
   baseConstrainWeight: 1
   constrainWeight: 1
   fleeWeight: 1
