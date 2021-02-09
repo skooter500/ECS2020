@@ -92,6 +92,7 @@ namespace ew
         EntityQuery translationsRotationsQuery;
         EntityQuery wanderQuery;
         EntityQuery boidQuery;
+        EntityQuery seperationQuery;
 
 
         protected override void OnCreate()
@@ -136,6 +137,16 @@ namespace ew
                     ComponentType.ReadOnly<Alignment>(),
                     ComponentType.ReadOnly<Cohesion>(),
                     ComponentType.ReadOnly<Constrain>()
+                }
+            });
+
+            seperationQuery = GetEntityQuery(new EntityQueryDesc()
+            {
+                All = new ComponentType[] {
+                    ComponentType.ReadOnly<Translation>(),
+                    ComponentType.ReadOnly<Rotation>(),
+                    ComponentType.ReadOnly<Boid>(),
+                    ComponentType.ReadOnly<Seperation>()
                 }
             });
         }
@@ -198,6 +209,20 @@ namespace ew
             var cnjHandle = countNeighbourJob.ScheduleParallel(translationsRotationsQuery, 1, Dependency);
             Dependency = JobHandle.CombineDependencies(Dependency, cnjHandle);
 
+            var seperationJob = new SeperationJob()
+            {
+                positions = this.positions,
+                maxNeighbours = this.maxNeighbours,
+                random = random,
+                neighbours = this.neighbours,
+                weight = bootstrap.seperationWeight,
+                seperationTypeHandle = sTHandle,
+                translationTypeHandle = ttTHandle,
+                boidTypeHandle = bTHandle,
+            };
+
+            var sjHandle = seperationJob.ScheduleParallel(seperationQuery, 1, Dependency);
+            Dependency = JobHandle.CombineDependencies(Dependency, sjHandle);
 
             var wanderJob = new WanderJob()
             {
@@ -504,7 +529,7 @@ namespace ew
         [NativeDisableParallelForRestriction]
         public NativeArray<Quaternion> rotations;
 
-        [ReadOnly] public ComponentTypeHandle<Boid> boidTypeHandle;
+        public ComponentTypeHandle<Boid> boidTypeHandle;
         [ReadOnly] public ComponentTypeHandle<Translation> translationTypeHandle;
         [ReadOnly] public ComponentTypeHandle<Rotation> rotationTypeHandle;
 
@@ -580,13 +605,13 @@ namespace ew
                 }
                 else
                 {
-                    for (int j = 0; i < positions.Length; i++)
+                    for (int j = 0; j < positions.Length; j++)
                     {
                         if (j != b.boidId)
                         {
                             if (Vector3.Distance(positions[b.boidId], positions[j]) < neighbourDistance)
                             {
-                                neighbours[neighbourStartIndex + neighbourCount] = i;
+                                neighbours[neighbourStartIndex + neighbourCount] = j;
                                 neighbourCount++;
                                 if (neighbourCount == maxNeighbours)
                                 {
@@ -597,6 +622,7 @@ namespace ew
                     }
                 }
                 b.taggedCount = neighbourCount;
+                boidChunk[i] = b;
             }
         }
     }
@@ -641,5 +667,73 @@ namespace ew
             cells.Add(cell, i);
         }
     }
+
+    [BurstCompile]
+    struct SeperationJob : IJobEntityBatch
+    {
+
+        [ReadOnly] public ComponentTypeHandle<Boid> boidTypeHandle;
+        [ReadOnly] public ComponentTypeHandle<Translation> translationTypeHandle;
+        public ComponentTypeHandle<Seperation> seperationTypeHandle;
+
+        [ReadOnly]
+        public NativeArray<int> neighbours;
+
+        [NativeDisableParallelForRestriction]
+        public NativeArray<Vector3> positions;
+        public float weight;
+        public int maxNeighbours;
+        public Unity.Mathematics.Random random;
+
+        public int spineOffset;
+        public int spineLength;
+
+        public void Execute(ArchetypeChunk batchInChunk, int batchIndex)
+        {
+
+            var boidChunk = batchInChunk.GetNativeArray(boidTypeHandle);
+            var translationsChunk = batchInChunk.GetNativeArray(translationTypeHandle);
+            var seperationChunk = batchInChunk.GetNativeArray(seperationTypeHandle);
+
+            Vector3 force = Vector3.zero;
+            for (int i = 0; i < batchInChunk.Count; i++)
+            {
+                Translation p = translationsChunk[i];
+                Seperation s = seperationChunk[i];                
+                Boid b = boidChunk[i];
+
+                for (int j = 0; j < b.taggedCount; j++)
+                {
+                    
+                    int neighbourStartIndex = maxNeighbours * b.boidId;
+                   
+                    Vector3 myPosition = positions[b.boidId];
+
+
+                    int neighbourId = neighbours[neighbourStartIndex + j];
+                    if (neighbourId == b.boidId)
+                    {
+                        continue;
+                    }
+                    Vector3 toNeighbour = positions[b.boidId] - positions[neighbourId];
+                    float mag = toNeighbour.magnitude;
+                    
+                    if (mag > 0) // Need this check otherwise this behaviour can return NAN
+                    {
+                        force += (Vector3.Normalize(toNeighbour) / mag);
+                    }
+                    else
+                    {
+                        // same position, so generate a random force
+                        Vector3 f = random.NextFloat3Direction();
+                        force += f * b.maxForce;
+                    }
+                }
+                s.force = force * weight;
+                seperationChunk[i] = s;
+            }
+        }
+    }
+
 }
 
