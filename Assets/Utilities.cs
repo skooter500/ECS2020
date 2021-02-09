@@ -16,4 +16,43 @@ public class Utilities
         return m1 + ((dist / range1) * range2);
     }
 
+    static public bool checkNaN(Quaternion v)
+    {
+        if (float.IsNaN(v.x) || float.IsInfinity(v.x))
+        {
+            return true;
+        }
+        if (float.IsNaN(v.y) || float.IsInfinity(v.y))
+        {
+            return true;
+        }
+        if (float.IsNaN(v.z) || float.IsInfinity(v.z))
+        {
+            return true;
+        }
+        if (float.IsNaN(v.w) || float.IsInfinity(v.w))
+        {
+            return true;
+        }
+        return false;
+    }
+
+    static public bool checkNaN(Vector3 v)
+    {
+        if (float.IsNaN(v.x) || float.IsInfinity(v.x))
+        {
+            return true;
+        }
+        if (float.IsNaN(v.y) || float.IsInfinity(v.y))
+        {
+            return true;
+        }
+        if (float.IsNaN(v.z) || float.IsInfinity(v.z))
+        {
+            return true;
+        }
+        return false;
+    }
+
+
 }

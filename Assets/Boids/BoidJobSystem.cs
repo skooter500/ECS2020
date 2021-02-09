@@ -111,44 +111,7 @@ namespace ew
     public class BoidJobSystem : SystemBase
     {
         public static BoidJobSystem Instance;
-        static public bool checkNaN(Quaternion v)
-        {
-            if (float.IsNaN(v.x) || float.IsInfinity(v.x))
-            {
-                return true;
-            }
-            if (float.IsNaN(v.y) || float.IsInfinity(v.y))
-            {
-                return true;
-            }
-            if (float.IsNaN(v.z) || float.IsInfinity(v.z))
-            {
-                return true;
-            }
-            if (float.IsNaN(v.w) || float.IsInfinity(v.w))
-            {
-                return true;
-            }
-            return false;
-        }
-    
-        static public bool checkNaN(Vector3 v)
-        {
-            if (float.IsNaN(v.x) || float.IsInfinity(v.x))
-            {
-                return true;
-            }
-            if (float.IsNaN(v.y) || float.IsInfinity(v.y))
-            {
-                return true;
-            }
-            if (float.IsNaN(v.z) || float.IsInfinity(v.z))
-            {
-                return true;
-            }
-            return false;
-        }
-
+        
         [NativeDisableParallelForRestriction]
         NativeArray<int> neighbours;
 
@@ -178,6 +141,7 @@ namespace ew
             Instance = this;
             bootstrap = GameObject.FindObjectOfType<BoidBootstrap>();
             Enabled = false;
+            Debug.Log("BoidBootstrap.MAX_BOIDS=" + BoidBootstrap.MAX_BOIDS);
             neighbours = new NativeArray<int>(BoidBootstrap.MAX_BOIDS * BoidBootstrap.MAX_NEIGHBOURS, Allocator.Persistent);
             positions = new NativeArray<Vector3>(BoidBootstrap.MAX_BOIDS, Allocator.Persistent);
             rotations = new NativeArray<Quaternion>(BoidBootstrap.MAX_BOIDS, Allocator.Persistent);
@@ -187,6 +151,7 @@ namespace ew
             translationsRotationsQuery = GetEntityQuery(new EntityQueryDesc()
             {
                 All = new ComponentType[] {
+                    ComponentType.ReadOnly<Boid>(),
                     ComponentType.ReadOnly<Translation>(),
                     ComponentType.ReadOnly<Rotation>()
                 }
@@ -241,10 +206,10 @@ namespace ew
             
             float deltaTime = Time.DeltaTime;
             
-            Unity.Mathematics.Random ran = new Unity.Mathematics.Random((uint)UnityEngine.Random.Range(1, 100000));
+            Unity.Mathematics.Random random = new Unity.Mathematics.Random((uint)UnityEngine.Random.Range(1, 100000));
 
             // Copy entities to the native arrays             
-            var copyToNativeJob = new CopyTransformsToJob()
+            var copyToNativeJob = new CopyTransformsToNativeJob()
             {
                 positions = this.positions,
                 rotations = this.rotations,
@@ -264,6 +229,7 @@ namespace ew
                 rotationTypeHandle = rTHandle,
                 boidTypeHandle = bTHandle,
                 dT = deltaTime,
+                ran = random,
                 weight = bootstrap.wanderWeight
             };
 
@@ -274,11 +240,16 @@ namespace ew
             {
                 positions = this.positions,
                 rotations = this.rotations,
+                speeds = this.speeds,
                 dT = deltaTime,
+                limitUpAndDown = bootstrap.limitUpAndDown,
+                banking = 0.01f,
+                damping = 0.01f,
                 wanderTypeHandle = wTHandle,
                 boidTypeHandle = bTHandle,
                 translationTypeHandle = ttTHandle,
                 seperationTypeHandle = sTHandle,
+                rotationTypeHandle = rTHandle,
                 cohesionTypeHandle = cTHandle,
                 alignmentTypeHandle = aTHandle,
                 constrainTypeHandle = conTHandle
@@ -287,7 +258,7 @@ namespace ew
             var boidJobHandle = boidJob.ScheduleParallel(boidQuery, 1, Dependency);
             Dependency = JobHandle.CombineDependencies(Dependency, boidJobHandle);
 
-            var copyFromNativeJob = new CopyTransformsFromJob()
+            var copyFromNativeJob = new CopyTransformsFromNativeJob()
             {
                 positions = this.positions,
                 rotations = this.rotations,
@@ -327,12 +298,12 @@ namespace ew
         [ReadOnly] public ComponentTypeHandle<Alignment> alignmentTypeHandle;
         [ReadOnly] public ComponentTypeHandle<Cohesion> cohesionTypeHandle;
         [ReadOnly] public ComponentTypeHandle<Constrain> constrainTypeHandle;
-        [ReadOnly] public ComponentTypeHandle<Boid> boidTypeHandle;
         [ReadOnly] public ComponentTypeHandle<Translation> translationTypeHandle;
         [ReadOnly] public ComponentTypeHandle<Rotation> rotationTypeHandle;
+        public ComponentTypeHandle<Boid> boidTypeHandle;
 
 
-        public Vector3 AccululateForces(ref Boid b, ref Seperation s, ref Alignment a, ref Cohesion c, ref Wander w, ref Constrain con)
+        private Vector3 AccululateForces(ref Boid b, ref Seperation s, ref Alignment a, ref Cohesion c, ref Wander w, ref Constrain con)
         {
             Vector3 force = Vector3.zero;
 
@@ -410,19 +381,19 @@ namespace ew
                 Cohesion c = cohesionChunk[i];
                 Alignment a = alignmentChunk[i];
                 Constrain con = constrainChunk[i];
-
-
-                b.force = AccululateForces(ref b, ref s, ref a, ref c, ref w, ref con) * b.weight;
+                
+                b.force = AccululateForces(ref b, ref s, ref a, ref c, ref w, ref con)* b.weight;
 
                 b.force = Vector3.ClampMagnitude(b.force, b.maxForce);
-                Vector3 newAcceleration = (b.force * b.weight) / b.mass;
-                newAcceleration.y *= limitUpAndDown;
+                Vector3 newAcceleration = (b.force * b.weight) *   (1.0f/ b.mass);
+                newAcceleration.y *= limitUpAndDown;                
                 b.acceleration = Vector3.Lerp(b.acceleration, newAcceleration, dT);
                 b.velocity += b.acceleration * dT;
                 b.velocity = Vector3.ClampMagnitude(b.velocity, b.maxSpeed);
-                //b.velocity.y *= 0.8f;
+                
                 float speed = b.velocity.magnitude;
                 speeds[b.boidId] = speed;
+                
                 if (speed > 0)
                 {
                     Vector3 tempUp = Vector3.Lerp(b.up, (Vector3.up) + (b.acceleration * banking), dT * 3.0f);
@@ -431,7 +402,6 @@ namespace ew
 
                     positions[b.boidId] += b.velocity * dT;
                     b.velocity *= (1.0f - (damping * dT));
-
                 }
                 b.force = Vector3.zero;
                 boidChunk[i] = b;
@@ -439,13 +409,14 @@ namespace ew
         }
     }
 
+    [BurstCompile]
     struct WanderJob : IJobEntityBatch
     {
         public float dT;
         public float weight;
         public Unity.Mathematics.Random ran;
 
-        [ReadOnly] public ComponentTypeHandle<Wander> wanderTypeHandle;
+        public ComponentTypeHandle<Wander> wanderTypeHandle;
         [ReadOnly] public ComponentTypeHandle<Boid> boidTypeHandle;
         [ReadOnly] public ComponentTypeHandle<Translation> translationTypeHandle;
         [ReadOnly] public ComponentTypeHandle<Rotation> rotationTypeHandle;
@@ -473,6 +444,9 @@ namespace ew
                 Quaternion q = r.Value;
                 Vector3 pos = p.Value;
                 Vector3 worldTarget = (q * localTarget) + pos;
+                //Debug.Log(worldTarget + "\t" + pos + "\t" + localTarget + "\t" + w.distance + "\t" + w.target + "\t" + w.jitter);
+                Debug.Log(p.Value);
+
                 w.force = (worldTarget - pos) * weight;
                 wanderChunk[i] = w;
             }
@@ -480,7 +454,7 @@ namespace ew
     }
 
     [BurstCompile]
-    struct CopyTransformsToJob : IJobEntityBatch
+    struct CopyTransformsToNativeJob : IJobEntityBatch
     {
         [NativeDisableParallelForRestriction]
         public NativeArray<Vector3> positions;
@@ -511,7 +485,7 @@ namespace ew
     }
 
     [BurstCompile]
-    struct CopyTransformsFromJob : IJobEntityBatch
+    struct CopyTransformsFromNativeJob : IJobEntityBatch
     {
         [NativeDisableParallelForRestriction]
         public NativeArray<Vector3> positions;
@@ -520,8 +494,8 @@ namespace ew
         public NativeArray<Quaternion> rotations;
 
         [ReadOnly] public ComponentTypeHandle<Boid> boidTypeHandle;
-        [ReadOnly] public ComponentTypeHandle<Translation> translationTypeHandle;
-        [ReadOnly] public ComponentTypeHandle<Rotation> rotationTypeHandle;
+        public ComponentTypeHandle<Translation> translationTypeHandle;
+        public ComponentTypeHandle<Rotation> rotationTypeHandle;
 
         public void Execute(ArchetypeChunk batchInChunk, int batchIndex)
         {
