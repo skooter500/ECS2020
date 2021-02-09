@@ -19,11 +19,9 @@ namespace ew
         public static int MAX_SPINES = 50;
         public static int MAX_NEIGHBOURS = 150;
 
-
         private EntityArchetype boidArchitype;
         private EntityArchetype headArchitype;
         private EntityArchetype tailArchitype;
-
         private EntityArchetype spineArchitype;
 
         private EntityManager entityManager;
@@ -203,12 +201,12 @@ namespace ew
             entityManager.SetComponentData(boidEntity, s);
 
             entityManager.SetComponentData(boidEntity, new Boid() { boidId = boidId, mass = 1, maxSpeed = 100, maxForce = 400, weight = 200 });
-            entityManager.SetComponentData(boidEntity, new Seperation());
-            entityManager.SetComponentData(boidEntity, new Alignment());
+            //entityManager.SetComponentData(boidEntity, new Seperation());
+            //entityManager.SetComponentData(boidEntity, new Alignment());
             entityManager.SetComponentData(boidEntity, new Cohesion());
             entityManager.SetComponentData(boidEntity, new Constrain());
             entityManager.SetComponentData(boidEntity, new Flee());
-            entityManager.SetComponentData(boidEntity, new Wander()
+            /*entityManager.SetComponentData(boidEntity, new Wander()
             {
                 distance = 2
                 ,
@@ -216,6 +214,7 @@ namespace ew
                 jitter = 80,
                 target = UnityEngine.Random.insideUnitSphere * 1.2f
             });
+            */
             entityManager.SetComponentData(boidEntity, new Spine() { parent = -1, spineId = (spineLength + 1) * boidId });
 
             entityManager.AddSharedComponentData(boidEntity, bodyMesh);
@@ -314,11 +313,11 @@ namespace ew
 
             entityManager.SetComponentData(boidEntity, new Boid() { boidId = boidId, mass = 1, maxSpeed = 100 * UnityEngine.Random.Range(0.9f, 1.1f), maxForce = 400, weight = 200 });
             entityManager.SetComponentData(boidEntity, new Seperation());
-            entityManager.SetComponentData(boidEntity, new Alignment());
-            entityManager.SetComponentData(boidEntity, new Cohesion());
-            entityManager.SetComponentData(boidEntity, new Constrain());
+            //entityManager.SetComponentData(boidEntity, new Alignment());
+            //entityManager.SetComponentData(boidEntity, new Cohesion());
+            //entityManager.SetComponentData(boidEntity, new Constrain());
             entityManager.SetComponentData(boidEntity, new Flee());
-            entityManager.SetComponentData(boidEntity, new Wander()
+            /*entityManager.SetComponentData(boidEntity, new Wander()
             {
                 distance = 2
                 ,
@@ -326,6 +325,7 @@ namespace ew
                 jitter = 80,
                 target = UnityEngine.Random.insideUnitSphere * 1.2f
             });
+            */
             entityManager.SetComponentData(boidEntity, new Spine() { parent = -1, spineId = (spineLength + 1) * boidId });
 
             entityManager.AddSharedComponentData(boidEntity, bodyMesh);

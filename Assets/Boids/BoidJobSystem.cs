@@ -203,26 +203,25 @@ namespace ew
             }
             return false;
         }
-        
-        [NativeDisableParallelForRestriction]        
+
+        [NativeDisableParallelForRestriction]
         NativeArray<int> neighbours;
 
         [NativeDisableParallelForRestriction]
         public NativeArray<Vector3> positions;
 
-        [NativeDisableParallelForRestriction]        
+        [NativeDisableParallelForRestriction]
         public NativeArray<Quaternion> rotations;
-        
-        [NativeDisableParallelForRestriction]        
+
+        [NativeDisableParallelForRestriction]
         public NativeArray<float> speeds;
 
-        [NativeDisableParallelForRestriction]        
+        [NativeDisableParallelForRestriction]
         public NativeMultiHashMap<int, int> cells;
 
         int maxNeighbours = 100;
 
         public BoidBootstrap bootstrap;
-
 
         protected override void OnCreate()
         {
@@ -246,16 +245,10 @@ namespace ew
         }
 
         protected override void OnUpdate()
-        {            
-            // Copy to local variables. Required for the lambdas
-            NativeArray<int> neighbours = this.neighbours;            
-            NativeArray<Vector3> positions = this.positions;
-            NativeArray<Quaternion> rotations = this.rotations;
-            NativeArray<float> speeds = this.speeds;
+        {
+            /*
             BoidBootstrap bootstrap = this.bootstrap;
-            NativeMultiHashMap<int, int>.ParallelWriter paralellCells = this.cells.AsParallelWriter();
-            NativeMultiHashMap<int, int> cells = this.cells;
-
+            // Copy to local variables. Required for the lambdas            
             float dT = Time.DeltaTime;
 
             float wanderWeight = bootstrap.wanderWeight;
@@ -277,19 +270,27 @@ namespace ew
             float fleeWeight = bootstrap.fleeWeight;
             float fleeDistance = bootstrap.fleeDistance;
 
+            NativeArray<int> neighbours = this.neighbours;            
+            NativeArray<Vector3> positions = this.positions;
+            NativeArray<Quaternion> rotations = this.rotations;
+            NativeArray<float> speeds = this.speeds;
+            NativeMultiHashMap<int, int> cells = this.cells;
+            */
+
             Unity.Mathematics.Random ran = new Unity.Mathematics.Random((uint)UnityEngine.Random.Range(1, 100000));
 
             // Copy entities to the native arrays             
-            var ctjHandle = Entities
-            .WithNativeDisableParallelForRestriction(positions)
-            .WithNativeDisableParallelForRestriction(rotations)
-            .ForEach((ref Translation p, ref Rotation r, ref Boid b) =>
+            var copyToNativeHandle = Entities
+                .WithNativeDisableParallelForRestriction(positions)
+                .WithNativeDisableParallelForRestriction(rotations)
+                .ForEach((ref Translation p, ref Rotation r, ref Boid b) =>
             {
                 positions[b.boidId] = p.Value;
                 rotations[b.boidId] = r.Value;
             })
             .ScheduleParallel(this.Dependency);
 
+            /*
             cells.Clear();
             var partitionJob = new PartitionSpaceJob()
             {
@@ -300,15 +301,16 @@ namespace ew
                 gridSize = bootstrap.gridSize
             };
 
-            var partitionHandle = partitionJob.Schedule(bootstrap.numBoids, 50, ctjHandle);
+            var partitionHandle = partitionJob.Schedule(bootstrap.numBoids, 50, copyToNativeHandle);
             
-            var cnjHandle = Entities
+            var countHandle = Entities
                 .WithNativeDisableParallelForRestriction(positions)
                 .WithNativeDisableParallelForRestriction(cells)
                 .WithNativeDisableParallelForRestriction(neighbours)
                 .ForEach((Boid b) =>
             {
                 int neighbourStartIndex = maxNeighbours * b.boidId;
+                
                 int neighbourCount = 0;
                 if (usePartitioning)
                 {
@@ -369,7 +371,7 @@ namespace ew
                         }
                     }
                 }
-                b.taggedCount = neighbourCount;
+                b.taggedCount = neighbourCount;                
             }
             )
             .ScheduleParallel(partitionHandle);
@@ -407,14 +409,16 @@ namespace ew
                         Vector3 f = ran.NextFloat3Direction();
                         force += f * b.maxForce;
                     }
-
                 }
                 s.force = force * seperationWeight;
             })
-            .ScheduleParallel(cnjHandle);
+            .ScheduleParallel(countHandle);
 
-
-            var cohesionHandle = Entities.ForEach((ref Boid b, ref Cohesion c) =>
+            
+            var cohesionHandle = Entities
+                .WithNativeDisableParallelForRestriction(positions)
+                .WithNativeDisableParallelForRestriction(neighbours)
+                .ForEach((ref Boid b, ref Cohesion c) =>
             {
                 Vector3 force = Vector3.zero;
                 Vector3 centerOfMass = Vector3.zero;
@@ -435,10 +439,40 @@ namespace ew
 
                 c.force = force * cohesionWeight;
             })
-            .ScheduleParallel(seperationHandle);
-            
+            .ScheduleParallel(seperationHandle);   
+            */
+
+            /*var alHandle = Entities
+            .WithNativeDisableParallelForRestriction(positions)
+            .WithNativeDisableParallelForRestriction(rotations)
+            .WithNativeDisableParallelForRestriction(speeds)
+            .ForEach((ref Boid b, ref Alignment a) =>
+            {
+                
+                Vector3 desired = Vector3.zero;
+                Vector3 force = Vector3.zero;
+                int neighbourStartIndex = maxNeighbours * b.boidId;
+                for (int i = 0; i < b.taggedCount; i++)
+                {
+                    int neighbourId = neighbours[neighbourStartIndex + i];
+                    desired += rotations[neighbourId] * Vector3.forward;
+                }
+
+                if (b.taggedCount > 0)
+                {
+                    desired /= b.taggedCount;
+                    force = desired - (rotations[b.boidId] * Vector3.forward);
+                }
+
+                a.force = force * alignmentWeight;
+            })
+            .ScheduleParallel(cohesionHandle);
                         
-            var wjHandle = Entities.ForEach((ref Boid b, ref Wander w, ref Translation p, ref Rotation r) =>
+            var wjHandle = Entities
+            .WithNativeDisableParallelForRestriction(positions)
+            .WithNativeDisableParallelForRestriction(rotations)
+            .WithNativeDisableParallelForRestriction(speeds)            
+            .ForEach((ref Boid b, ref Wander w, ref Translation p, ref Rotation r) =>
             {
                 Vector3 disp = w.jitter * ran.NextFloat3Direction() * dT;
                 w.target += disp;
@@ -452,7 +486,7 @@ namespace ew
                 Vector3 worldTarget = (q * localTarget) + pos;
                 w.force = (worldTarget - pos) * wanderWeight;
             })
-            .ScheduleParallel(cohesionHandle);            
+            .ScheduleParallel(alHandle);            
             // Integrate the forces
             
             var boidHandle = Entities
@@ -484,7 +518,7 @@ namespace ew
                 }
             })
             .ScheduleParallel(wjHandle);
-            
+            */
             var cfJobHandle = Entities
             .WithNativeDisableParallelForRestriction(positions)
             .WithNativeDisableParallelForRestriction(rotations)
@@ -498,4 +532,45 @@ namespace ew
             return;
         }
     }
+
+    struct WanderJob : IJobEntityBatch
+    {
+        public float dT;
+        public float weight;
+        public Unity.Mathematics.Random ran;
+
+        [ReadOnly] public ComponentTypeHandle<Wander> wanderTypeHandle;
+        [ReadOnly] public ComponentTypeHandle<Boid> boidTypeHandle;
+        [ReadOnly] public ComponentTypeHandle<Translation> translationTypeHandle;
+        [ReadOnly] public ComponentTypeHandle<Rotation> rotationTypeHandle;
+
+        public void Execute(ArchetypeChunk batchInChunk, int batchIndex)
+        {
+            var wanderChunk = batchInChunk.GetNativeArray(wanderTypeHandle);
+            var boidChunk = batchInChunk.GetNativeArray(boidTypeHandle);
+            var translationsChunk = batchInChunk.GetNativeArray(translationTypeHandle);
+            var rotationsChunk = batchInChunk.GetNativeArray(rotationTypeHandle);
+
+            for (int i = 0; i < batchInChunk.Count; i++)
+            {
+
+                Wander w = wanderChunk[i];
+                Translation p = translationsChunk[i];
+                Rotation r = rotationsChunk[i];
+                Vector3 disp = w.jitter * ran.NextFloat3Direction() * dT;
+                w.target += disp;
+                w.target.Normalize();
+                w.target *= w.radius;
+
+                Vector3 localTarget = (Vector3.forward * w.distance) + w.target;
+
+                Quaternion q = r.Value;
+                Vector3 pos = p.Value;
+                Vector3 worldTarget = (q * localTarget) + pos;
+                w.force = (worldTarget - pos) * weight;
+                wanderChunk[i] = w;
+            }
+        }
+    }
 }
+

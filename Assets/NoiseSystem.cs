@@ -17,7 +17,6 @@ public class NoiseSystem : SystemBase
         float s = this.scale;
         // Schedule job to rotate around up vector
         Entities
-            .WithName("CubeComponent")
             .ForEach((ref Scale scale, ref Translation translation, in CubeComponent cubeComponent) =>
             {
                 float nn = Utilities.Map(Perlin.Noise(translation.Value[0] + t, translation.Value[1] + t, translation.Value[2] + t ), -1, 1, 0, s);
