@@ -105,6 +105,7 @@ namespace ew
         }
     }
     */
+    [BurstCompile]
     [UpdateAfter(typeof(SpineSystem))]
     public class HeadsAndTailsSystem : SystemBase
     {

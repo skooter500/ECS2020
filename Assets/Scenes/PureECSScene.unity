@@ -591,38 +591,38 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   material: {fileID: 2100000, guid: b8a4f5c47e7c2ab4c91d9ee24d9a4214, type: 2}
-  seperationWeight: 10
+  seperationWeight: 20
   cohesionWeight: 2
   alignmentWeight: 1
-  wanderWeight: 1
-  baseConstrainWeight: 0
-  constrainWeight: 0
+  wanderWeight: 2
+  baseConstrainWeight: 1
+  constrainWeight: 0.05
   fleeWeight: 0
   fleeDistance: 50
-  headAmplitude: 20
-  tailAmplitude: 30
-  animationFrequency: 0.03
-  totalNeighbours: 50
+  headAmplitude: 15
+  tailAmplitude: 20
+  animationFrequency: 0.02
+  totalNeighbours: 100
   threedcells: 0
-  spineLength: 4
+  spineLength: 25
   bondDamping: 0.01
   angularDamping: 8
   limitUpAndDown: 1
   maxBoidsPerFrame: 500
   seekWeight: 0
   constrainTranslation: {x: 0, y: 0, z: 0}
-  numBoids: 500
+  numBoids: 1000
   radius: 1000
   neighbourDistance: 150
-  speed: 1
+  speed: 2
   isContainer: 0
-  size: 3
+  size: 17
   cellSize: 50
   gridSize: 10000
   usePartitioning: 0
-  colorSpeed: 100
+  colorSpeed: 50
   colorAdd: 0
-  toPass: 0.3
+  toPass: 0.5
   clickCount: 0
 --- !u!4 &1211432753
 Transform:

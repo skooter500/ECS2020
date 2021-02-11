@@ -245,7 +245,10 @@ namespace ew
             {
                 positions = this.positions,
                 boidTypeHandle = bTHandle,
-                constrainTypeHandle = conTHandle
+                constrainTypeHandle = conTHandle,
+                weight = bootstrap.constrainWeight,
+                centre = bootstrap.transform.position,
+                radius = bootstrap.radius                
             };
 
             var conjHandle = constrainJob.ScheduleParallel(constrainQuery, 1, Dependency);
@@ -837,41 +840,38 @@ namespace ew
     }
 
     [BurstCompile]
-        struct ConstrainJob : IJobEntityBatch
+    struct ConstrainJob : IJobEntityBatch
+    {
+        [NativeDisableParallelForRestriction]
+        public NativeArray<Vector3> positions;
+        public Vector3 centre;
+        public float radius;
+        public float weight;
+
+        [ReadOnly] public ComponentTypeHandle<Boid> boidTypeHandle;
+        public ComponentTypeHandle<Constrain> constrainTypeHandle;
+
+        public void Execute(ArchetypeChunk batchInChunk, int batchIndex)
         {
-            [NativeDisableParallelForRestriction]
-            public NativeArray<Vector3> positions;
-            public Vector3 centre;
-            public float radius;
-            public float weight;
+            var boidChunk = batchInChunk.GetNativeArray(boidTypeHandle);
+            var constrainChunk = batchInChunk.GetNativeArray(constrainTypeHandle);
 
-            [ReadOnly] public ComponentTypeHandle<Boid> boidTypeHandle;
-            [ReadOnly] public ComponentTypeHandle<Translation> translationTypeHandle;
-            public ComponentTypeHandle<Constrain> constrainTypeHandle;
-
-            public void Execute(ArchetypeChunk batchInChunk, int batchIndex)
+            for (int i = 0; i < batchInChunk.Count; i++)
             {
-                var boidChunk = batchInChunk.GetNativeArray(boidTypeHandle);
-                var translationsChunk = batchInChunk.GetNativeArray(translationTypeHandle);
-                var constrainChunk = batchInChunk.GetNativeArray(constrainTypeHandle);
-
-
-                for (int i = 0; i < batchInChunk.Count; i++)
+                Constrain con = constrainChunk[i];
+                Boid b = boidChunk[i];
+            
+                Vector3 force = Vector3.zero;
+                Vector3 toTarget = positions[b.boidId] - centre;
+                if (toTarget.magnitude > radius)
                 {
-                    Constrain con = constrainChunk[i];
-                    Boid b = boidChunk[i];
-                
-                    Vector3 force = Vector3.zero;
-                    Vector3 toTarget = positions[b.boidId] - centre;
-                    if (toTarget.magnitude > radius)
-                    {
-                        force = Vector3.Normalize(toTarget) * (radius - toTarget.magnitude);
-                    }
-                    con.force = force * weight;
-                    constrainChunk[i] = con;
+                    force = Vector3.Normalize(toTarget) * (radius - toTarget.magnitude);
                 }
+                con.force = force * weight;
+                constrainChunk[i] = con;
             }
         }
+    }
 
     [BurstCompile]
     struct SeperationJob : IJobEntityBatch

@@ -15,7 +15,8 @@ namespace ew
         public int spineId;
         public Vector3 offset;
     }
-    
+
+    [BurstCompile]
     [UpdateAfter(typeof(BoidJobSystem))]
     public class SpineSystem : SystemBase
     {
