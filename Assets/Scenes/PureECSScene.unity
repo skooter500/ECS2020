@@ -591,13 +591,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   material: {fileID: 2100000, guid: b8a4f5c47e7c2ab4c91d9ee24d9a4214, type: 2}
-  seperationWeight: 0
-  cohesionWeight: 0
+  seperationWeight: 10
+  cohesionWeight: 2
   alignmentWeight: 1
-  wanderWeight: 0
-  baseConstrainWeight: 1
-  constrainWeight: 1
-  fleeWeight: 1
+  wanderWeight: 1
+  baseConstrainWeight: 0
+  constrainWeight: 0
+  fleeWeight: 0
   fleeDistance: 50
   headAmplitude: 20
   tailAmplitude: 30
@@ -612,8 +612,8 @@ MonoBehaviour:
   seekWeight: 0
   constrainTranslation: {x: 0, y: 0, z: 0}
   numBoids: 500
-  radius: 200
-  neighbourDistance: 20
+  radius: 1000
+  neighbourDistance: 150
   speed: 1
   isContainer: 0
   size: 3

@@ -95,7 +95,7 @@ namespace ew
         EntityQuery seperationQuery;
         EntityQuery cohesionQuery;
         EntityQuery alignmentQuery;
-
+        EntityQuery constrainQuery;
 
         protected override void OnCreate()
         {
@@ -171,6 +171,16 @@ namespace ew
                     ComponentType.ReadOnly<Cohesion>()
                 }
             });
+
+            constrainQuery = GetEntityQuery(new EntityQueryDesc()
+            {
+                All = new ComponentType[] {
+                    ComponentType.ReadOnly<Constrain>(),
+                    ComponentType.ReadOnly<Boid>()
+                }
+            });
+
+
         }
 
         protected override void OnDestroy()
@@ -230,6 +240,17 @@ namespace ew
             };
             var cnjHandle = countNeighbourJob.ScheduleParallel(translationsRotationsQuery, 1, Dependency);
             Dependency = JobHandle.CombineDependencies(Dependency, cnjHandle);
+
+            var constrainJob = new ConstrainJob()
+            {
+                positions = this.positions,
+                boidTypeHandle = bTHandle,
+                constrainTypeHandle = conTHandle
+            };
+
+            var conjHandle = constrainJob.ScheduleParallel(constrainQuery, 1, Dependency);
+            Dependency = JobHandle.CombineDependencies(Dependency, conjHandle);
+
 
             var seperationJob = new SeperationJob()
             {
@@ -348,15 +369,15 @@ namespace ew
             var boidChunk = batchInChunk.GetNativeArray(boidTypeHandle);
             var cohesionChunk = batchInChunk.GetNativeArray(cohesionTypeHandle);
 
-            Vector3 force = Vector3.zero;
-            Vector3 centerOfMass = Vector3.zero;
-
+            
             for (int i = 0; i < batchInChunk.Count; i++)
             {
                 Cohesion c = cohesionChunk[i];
                 Boid b = boidChunk[i];
                 int neighbourStartIndex = maxNeighbours * b.boidId;
 
+                Vector3 force = Vector3.zero;
+                Vector3 centerOfMass = Vector3.zero;
                 for (int j = 0; j < b.taggedCount; j++)
                 {
                     int neighbourId = neighbours[neighbourStartIndex + j];
@@ -814,6 +835,43 @@ namespace ew
             cells.Add(cell, i);
         }
     }
+
+    [BurstCompile]
+        struct ConstrainJob : IJobEntityBatch
+        {
+            [NativeDisableParallelForRestriction]
+            public NativeArray<Vector3> positions;
+            public Vector3 centre;
+            public float radius;
+            public float weight;
+
+            [ReadOnly] public ComponentTypeHandle<Boid> boidTypeHandle;
+            [ReadOnly] public ComponentTypeHandle<Translation> translationTypeHandle;
+            public ComponentTypeHandle<Constrain> constrainTypeHandle;
+
+            public void Execute(ArchetypeChunk batchInChunk, int batchIndex)
+            {
+                var boidChunk = batchInChunk.GetNativeArray(boidTypeHandle);
+                var translationsChunk = batchInChunk.GetNativeArray(translationTypeHandle);
+                var constrainChunk = batchInChunk.GetNativeArray(constrainTypeHandle);
+
+
+                for (int i = 0; i < batchInChunk.Count; i++)
+                {
+                    Constrain con = constrainChunk[i];
+                    Boid b = boidChunk[i];
+                
+                    Vector3 force = Vector3.zero;
+                    Vector3 toTarget = positions[b.boidId] - centre;
+                    if (toTarget.magnitude > radius)
+                    {
+                        force = Vector3.Normalize(toTarget) * (radius - toTarget.magnitude);
+                    }
+                    con.force = force * weight;
+                    constrainChunk[i] = con;
+                }
+            }
+        }
 
     [BurstCompile]
     struct SeperationJob : IJobEntityBatch
