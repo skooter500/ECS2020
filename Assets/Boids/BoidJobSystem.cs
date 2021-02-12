@@ -205,7 +205,7 @@ namespace ew
             ComponentTypeHandle<Alignment> aTHandle = GetComponentTypeHandle<Alignment>();
             ComponentTypeHandle<Constrain> conTHandle = GetComponentTypeHandle<Constrain>();
 
-            float deltaTime = Time.DeltaTime;
+            float deltaTime = Time.DeltaTime * bootstrap.speed;
 
             Unity.Mathematics.Random random = new Unity.Mathematics.Random((uint)UnityEngine.Random.Range(1, 100000));
 

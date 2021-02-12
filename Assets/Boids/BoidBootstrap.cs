@@ -487,7 +487,7 @@ namespace ew
 
             Cursor.visible = false;
 
-            //cr = StartCoroutine(Show());
+            cr = StartCoroutine(Show());
 
             //Cursor.lockState = CursorLockMode.Locked;
         }
