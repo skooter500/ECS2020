@@ -115,7 +115,7 @@ namespace ew
                     ComponentType.ReadOnly<Boid>(),
                     ComponentType.ReadOnly<Translation>(),
                     ComponentType.ReadOnly<Rotation>()
-                }
+                }                
             });
 
             wanderQuery = GetEntityQuery(new EntityQueryDesc()
@@ -222,6 +222,21 @@ namespace ew
             var copyToNativeHandle = copyToNativeJob.ScheduleParallel(translationsRotationsQuery, 1, Dependency);
             Dependency = JobHandle.CombineDependencies(Dependency, copyToNativeHandle);
 
+            if (bootstrap.usePartitioning)
+            {
+                cells.Clear();
+                var partitionJob = new PartitionSpaceJob()
+                {
+                    positions = this.positions,
+                    cells = this.cells.AsParallelWriter(),
+                    threedcells = bootstrap.threedcells,
+                    cellSize = bootstrap.cellSize,
+                    gridSize = bootstrap.gridSize
+                };
+
+                var partitionHandle = partitionJob.Schedule(bootstrap.numBoids, 50, Dependency);
+                Dependency = JobHandle.CombineDependencies(Dependency, partitionHandle);
+            }
             var countNeighbourJob = new CountNeighboursJob()
             {
                 positions = this.positions,
@@ -733,7 +748,6 @@ namespace ew
 
                 if (usePartitioning)
                 {
-                    /*
                     int surroundingCellCount = (int)Mathf.Ceil(neighbourDistance / cellSize);
 
                     // Are we looking above and below? 
@@ -771,8 +785,7 @@ namespace ew
                             }
                         }
 
-                    }
-                    */
+                    }                    
                 }
                 else
                 {
@@ -939,6 +952,8 @@ namespace ew
             }
         }
     }
+
+    
 
     #endregion
 
