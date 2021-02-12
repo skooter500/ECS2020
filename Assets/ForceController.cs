@@ -36,7 +36,10 @@ namespace BGE.Forms
             rigidBody.freezeRotation = true;        
 
             desiredRotation = transform.rotation;
-            headCamera = Camera.main;
+            if (headCamera == null)
+            {
+                headCamera = Camera.main;
+            } 
             cameraType = CameraType.forward;
         }
 
