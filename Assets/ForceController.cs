@@ -28,6 +28,8 @@ namespace BGE.Forms
         public float flowForce = 1000;
         public float flowScale = 0.01f;
 
+        public bool allowPitch = false;
+
         // Use this for initialization
         void Start()
         {
@@ -139,7 +141,7 @@ namespace BGE.Forms
             {
                 Yaw(mouseX * Time.deltaTime * contAngularSpeed);
             }
-            else if (mouseY != 0 /*&& !UnityEngine.XR.XRDevice.isPresent*/)
+            else if (mouseY != 0 && allowPitch /*&& !UnityEngine.XR.XRDevice.isPresent*/)
             {
                 Pitch(-mouseY * Time.deltaTime * contAngularSpeed);
             }
@@ -151,7 +153,7 @@ namespace BGE.Forms
 
             if (Mathf.Abs(joyY) > 0.1f)
             {
-                //if (!UnityEngine.XR.XRDevice.isPresent)
+                if (allowPitch /* && !UnityEngine.XR.XRDevice.isPresent*/)
                 {
                     Pitch(-joyY * contAngularSpeed * Time.deltaTime);
                 }
