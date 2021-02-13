@@ -176,7 +176,7 @@ namespace ew
             return boidEntity;
         }
 
-        Entity CreateBoidWithTail(Vector3 pos, Quaternion q, int boidId, float size)
+        Entity Create4PartBoid(Vector3 pos, Quaternion q, int boidId, float size, int parts)
         {
             Entity boidEntity = entityManager.CreateEntity(boidArchitype);
             allTheBoids[boidId] = boidEntity;
@@ -200,26 +200,25 @@ namespace ew
 
             entityManager.SetComponentData(boidEntity, s);
 
-            entityManager.SetComponentData(boidEntity, new Boid() { boidId = boidId, mass = 1, maxSpeed = 100, maxForce = 400, weight = 200 });
-            //entityManager.SetComponentData(boidEntity, new Seperation());
-            //entityManager.SetComponentData(boidEntity, new Alignment());
+            entityManager.SetComponentData(boidEntity, new Boid() { boidId = boidId, mass = 1, maxSpeed = 100 * UnityEngine.Random.Range(0.9f, 1.1f), maxForce = 400, weight = 200 });
+            entityManager.SetComponentData(boidEntity, new Seperation());
+            entityManager.SetComponentData(boidEntity, new Alignment());
             entityManager.SetComponentData(boidEntity, new Cohesion());
             entityManager.SetComponentData(boidEntity, new Constrain());
             entityManager.SetComponentData(boidEntity, new Flee());
-            /*entityManager.SetComponentData(boidEntity, new Wander()
+            entityManager.SetComponentData(boidEntity, new Wander()
             {
                 distance = 2
                 ,
                 radius = 1.2f,
                 jitter = 80,
                 target = UnityEngine.Random.insideUnitSphere * 1.2f
-            });
-            */
+            });                        
             entityManager.SetComponentData(boidEntity, new Spine() { parent = -1, spineId = (spineLength + 1) * boidId });
 
             entityManager.AddSharedComponentData(boidEntity, bodyMesh);
 
-            for (int i = 0; i < spineLength; i++)
+            for (int i = 0; i < parts; i++)
             {
                 int parentId = (boidId * (spineLength + 1)) + i;
                 Translation sp = new Translation
@@ -236,7 +235,7 @@ namespace ew
                 entityManager.AddSharedComponentData(spineEntity, bodyMesh);
                 s = new NonUniformScale
                 {
-                    Value = new Vector3(size * 0.3f, Map(i, 0, spineLength, size, 0.1f * size), size)
+                    Value = new Vector3(0.01f, Map(i, 0, spineLength, size, 0.01f * size), size)
                 };
                 //s.Value = new Vector3(2, 4, 10);
                 entityManager.SetComponentData(spineEntity, s);
@@ -268,24 +267,28 @@ namespace ew
             Entity tailEntity = entityManager.CreateEntity(tailArchitype);
             allTheheadsAndTails[(boidId * 2) + 1] = tailEntity;
             Translation tailTranslation = new Translation();
-            tailTranslation.Value = pos - (q * Vector3.forward) * size * (spineLength + 2);
+            tailTranslation.Value = pos - (q * Vector3.forward) * size;
+            //tailTranslation.Value = pos - (q * Vector3.forward) * size * (spineLength + 2);
             entityManager.SetComponentData(tailEntity, tailTranslation);
             Rotation tailRotation = new Rotation();
             tailRotation.Value = q;
             s = new NonUniformScale
             {
-                Value = new Vector3(size * 0.2f, size * 0.1f, size)
+                Value = new Vector3(size * 0.3f, size, size)
             };
             //s.Value = new Vector3(2, 4, 10);
             entityManager.SetComponentData(tailEntity, s);
             entityManager.SetComponentData(tailEntity, tailRotation);
             entityManager.AddSharedComponentData(tailEntity, bodyMesh);
             entityManager.SetComponentData(tailEntity, s);
-            entityManager.SetComponentData(tailEntity, new Tail() { boidId = boidId, spineId = (boidId * (spineLength + 1)) + spineLength });
+            entityManager.SetComponentData(tailEntity, new Tail() { boidId = boidId, spineId = boidId * (spineLength + 1) });
             // End tail    
 
             return boidEntity;
+
+
         }
+
 
         Entity CreateBoidWithTrail(Vector3 pos, Quaternion q, int boidId, float size)
         {
@@ -487,7 +490,7 @@ namespace ew
 
             Cursor.visible = false;
 
-            //cr = StartCoroutine(Show());
+            cr = StartCoroutine(Show());
 
             //Cursor.lockState = CursorLockMode.Locked;
         }
