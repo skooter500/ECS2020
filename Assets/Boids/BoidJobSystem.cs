@@ -867,6 +867,23 @@ namespace ew
                 {
                     force = Vector3.Normalize(toTarget) * (radius - toTarget.magnitude);
                 }
+                /*
+                float xDist = positions[b.boidId].x - centre.x;
+                if (Mathf.Abs(xDist) > radius)
+                {
+                    force.x +=  radius - xDist;
+                }
+                float yDist = positions[b.boidId].y - centre.y;
+                if (Mathf.Abs(yDist) > radius)
+                {
+                    force.y +=  radius - yDist;
+                }
+                float zDist = positions[b.boidId].z - centre.z;
+                if (Mathf.Abs(zDist) > radius)
+                {
+                    force.z +=  radius - zDist;
+                }
+                */
                 con.force = force * weight;
                 constrainChunk[i] = con;
             }
