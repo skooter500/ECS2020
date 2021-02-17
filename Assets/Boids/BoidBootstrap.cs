@@ -27,8 +27,10 @@ namespace ew
         private EntityManager entityManager;
 
         private RenderMesh bodyMesh;
+        private RenderMesh trailMesh;
         public Mesh mesh;
         public Material material;
+        public Material trailMaterial;
 
         public float seperationWeight = 1.0f;
         public float cohesionWeight = 2.0f;
@@ -176,7 +178,7 @@ namespace ew
             return boidEntity;
         }
 
-        Entity Create4PartBoid(Vector3 pos, Quaternion q, int boidId, float size, int parts)
+        Entity CreateMultiPartBoid(Vector3 pos, Quaternion q, int boidId, float size, int parts)
         {
             Entity boidEntity = entityManager.CreateEntity(boidArchitype);
             allTheBoids[boidId] = boidEntity;
@@ -235,7 +237,7 @@ namespace ew
                 entityManager.AddSharedComponentData(spineEntity, bodyMesh);
                 s = new NonUniformScale
                 {
-                    Value = new Vector3(0.01f, Map(i, 0, spineLength, size, 0.01f * size), size)
+                    Value = new Vector3(size * 0.3f, size, size)
                 };
                 //s.Value = new Vector3(2, 4, 10);
                 entityManager.SetComponentData(spineEntity, s);
@@ -267,8 +269,7 @@ namespace ew
             Entity tailEntity = entityManager.CreateEntity(tailArchitype);
             allTheheadsAndTails[(boidId * 2) + 1] = tailEntity;
             Translation tailTranslation = new Translation();
-            tailTranslation.Value = pos - (q * Vector3.forward) * size;
-            //tailTranslation.Value = pos - (q * Vector3.forward) * size * (spineLength + 2);
+            tailTranslation.Value = pos - (q * Vector3.forward) * size * parts;
             entityManager.SetComponentData(tailEntity, tailTranslation);
             Rotation tailRotation = new Rotation();
             tailRotation.Value = q;
@@ -281,9 +282,36 @@ namespace ew
             entityManager.SetComponentData(tailEntity, tailRotation);
             entityManager.AddSharedComponentData(tailEntity, bodyMesh);
             entityManager.SetComponentData(tailEntity, s);
-            entityManager.SetComponentData(tailEntity, new Tail() { boidId = boidId, spineId = boidId * (spineLength + 1) });
+            entityManager.SetComponentData(tailEntity, new Tail() { boidId = boidId, spineId = (boidId * (spineLength + 1)) + parts });
             // End tail    
 
+            
+            int sl = 15;
+            // Add a trail
+            for (int i = 0; i < sl; i++)
+            {
+                int parentId = (boidId * (this.spineLength + 1)) + parts + i;
+                Translation sp = new Translation
+                {
+                    Value = pos - (q * Vector3.forward) * size * (float)(parts + i + 1)
+                };
+                Entity spineEntity = entityManager.CreateEntity(spineArchitype);
+                int spineIndex = (boidId * spineLength) + i;
+                allTheSpines[spineIndex] = spineEntity;
+
+                entityManager.SetComponentData(spineEntity, sp);
+                entityManager.SetComponentData(spineEntity, r);
+                entityManager.SetComponentData(spineEntity, new Spine() { parent = parentId, spineId = parentId + 1, offset = new Vector3(0, 0, -size) });
+                entityManager.AddSharedComponentData(spineEntity, trailMesh);
+                s = new NonUniformScale
+                {
+                    Value = new Vector3(0.01f, Map(i, 0, sl, size, 0.01f * size), size)
+                };
+                //s.Value = new Vector3(2, 4, 10);
+                entityManager.SetComponentData(spineEntity, s);
+
+            }
+            
             return boidEntity;
 
 
@@ -475,6 +503,11 @@ namespace ew
                     mesh = mesh,
                     material = material
                 };
+                trailMesh = new RenderMesh
+                {
+                    mesh = mesh,
+                    material = trailMaterial
+                };
                 StartCoroutine(CreateBoids());
             }
 
@@ -505,7 +538,8 @@ namespace ew
             {
                 Vector3 pos = UnityEngine.Random.insideUnitSphere * radius;
                 Quaternion q = Quaternion.Euler(UnityEngine.Random.Range(-20, 20), UnityEngine.Random.Range(0, 360), 0);
-                CreateBoidWithTrail(transform.position + pos, q, created, size);
+                //CreateBoidWithTrail(transform.position + pos, q, created, size);
+                CreateMultiPartBoid(transform.position + pos, q, created, size, 1);
                 created++;
                 if (created % maxBoidsPerFrame == 0)
                 {

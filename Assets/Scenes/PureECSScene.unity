@@ -326,7 +326,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 882082061}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: cfa664786cefa1540a06f6d6e807e1e5, type: 3}
   m_Name: 
@@ -545,6 +545,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   material: {fileID: 2100000, guid: b8a4f5c47e7c2ab4c91d9ee24d9a4214, type: 2}
+  trailMaterial: {fileID: 2100000, guid: f2b2a3d5d3596bc4a987fcf56d534083, type: 2}
   seperationWeight: 20
   cohesionWeight: 2
   alignmentWeight: 1
