@@ -26,6 +26,8 @@ public class LifeSystem : SystemBase
     EndSimulationEntityCommandBufferSystem ecb;
     EntityArchetype cubeArchetype;
 
+    Entity cubePrefab;
+
     EntityManager entityManager;
 
     private void Set(int slice, int row, int col, int val)
@@ -62,7 +64,7 @@ public class LifeSystem : SystemBase
         board = new NativeArray<int>((int)Mathf.Pow(size, 3), Allocator.Persistent);
         next = new NativeArray<int>((int)Mathf.Pow(size, 3), Allocator.Persistent);
         cells = new NativeHashMap<int, Entity>((int)Mathf.Pow(size, 3), Allocator.Persistent);
-        Enabled = false;
+        //Enabled = false;
 
         ecb = World.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>();
 
@@ -79,7 +81,8 @@ public class LifeSystem : SystemBase
         cubeArchetype = entityManager.CreateArchetype(
                     typeof(Translation),
                     typeof(LocalToWorld),
-                    typeof(RenderBounds)
+                    typeof(RenderBounds),
+                    typeof(RenderMesh)
         );
 
         Material material = Resources.Load<Material>("LifeMaterial");
@@ -89,7 +92,10 @@ public class LifeSystem : SystemBase
         {
             mesh = mesh,
             material = material
-        };         
+        };
+
+        cubePrefab = entityManager.CreateEntity(cubeArchetype);
+        entityManager.SetSharedComponentData(cubePrefab, cubeMesh);
     }
 
     private void InitialState()
@@ -109,23 +115,22 @@ public class LifeSystem : SystemBase
 
     protected override void OnUpdate()
     {
-        
         var ecbpw = ecb.CreateCommandBuffer().AsParallelWriter();
         
         var lifeJob = new LifeJob()
         {
-            archetype = this.cubeArchetype,
+            cubePrefab = this.cubePrefab,
             board = this.board,
             next = this.next,
             cells = this.cells,
             size = this.size,
-            cubeMesh = cubeMesh,
             ecb = ecbpw
         };
 
         var jobHandle = lifeJob.Schedule(size * size * size, size, Dependency);
 
         JobHandle.CombineDependencies(Dependency, jobHandle);        
+        ecb.AddJobHandleForProducer(Dependency);
     }
 
     [BurstCompile]
@@ -142,11 +147,9 @@ public class LifeSystem : SystemBase
 
         public EntityCommandBuffer.ParallelWriter ecb;
 
-        public EntityArchetype archetype;
+        public Entity cubePrefab;
 
         public int size;
-
-        public RenderMesh cubeMesh;
 
         public static int ToCell(int size, int slice, int row, int col)
         {
@@ -185,11 +188,10 @@ public class LifeSystem : SystemBase
                 Entity item;
                 if (!cells.TryGetValue(cell, out item))
                 {
-                    Entity e = ecb.CreateEntity(i, archetype);
+                    Entity e = ecb.Instantiate(i, cubePrefab);
                     Translation p = new Translation();
                     p.Value = new float3(s, row, col);
                     ecb.SetComponent<Translation>(i, e, p);
-                    ecb.SetSharedComponent<RenderMesh>(i, e, cubeMesh);
                     cells.TryAdd(cell, e);
                 }
             }
@@ -198,7 +200,8 @@ public class LifeSystem : SystemBase
         private int CountNeighbours(int row, int col, int slice)
         {
             int count = 0;
-            for (int s = slice - 1; s <= slice + 1; s++)
+            int s = 0;
+            //for (int s = slice - 1; s <= slice + 1; s++)
             {
                 for (int r = row - 1; r <= row + 1; r++)
                 {
