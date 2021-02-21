@@ -129,7 +129,7 @@ public class LifeSystem : SystemBase
 
         var jobHandle = lifeJob.Schedule(size * size * size, size, Dependency);
 
-        JobHandle.CombineDependencies(Dependency, jobHandle);        
+        Dependency = JobHandle.CombineDependencies(Dependency, jobHandle);        
         ecb.AddJobHandleForProducer(Dependency);
     }
 
@@ -197,7 +197,7 @@ public class LifeSystem : SystemBase
             }
         }
 
-        private int CountNeighbours(int row, int col, int slice)
+        private int CountNeighbours(int slice, int row, int col)
         {
             int count = 0;
             int s = 0;
@@ -228,6 +228,7 @@ public class LifeSystem : SystemBase
             int col = (i - (row * size)) - (slice * size * size);
             
             int count = CountNeighbours(slice, row, col);
+            Debug.Log(count);
             if (Get(slice, row, col) > 0)
             {
                 if (count == 2 || count == 3)
