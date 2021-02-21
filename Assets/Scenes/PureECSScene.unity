@@ -230,6 +230,7 @@ GameObject:
   - component: {fileID: 882082064}
   - component: {fileID: 882082066}
   - component: {fileID: 882082067}
+  - component: {fileID: 882082068}
   m_Layer: 0
   m_Name: player
   m_TagString: Untagged
@@ -338,6 +339,20 @@ MonoBehaviour:
   targetPos: {x: 0, y: 0, z: 0}
   timeToNext: 9
   targetQuaternion: {x: 0, y: 0, z: 0, w: 1}
+--- !u!114 &882082068
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 882082061}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14edd360a0a4c104ab45f190c3845bfe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  scenes:
+  - Life
 --- !u!1 &1096714489
 GameObject:
   m_ObjectHideFlags: 0
