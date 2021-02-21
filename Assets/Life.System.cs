@@ -32,10 +32,6 @@ public class LifeSystem : SystemBase
     {
         int cell = LifeJob.ToCell(size, slice, row, col);
         board[cell] = val;
-
-        int s = (cell / (size * size));
-        int r = (cell - (slice * size * size)) / (size);
-        int c = (cell - (row * size)) - (slice * size * size);
         
         // Do we need an entity created or destroyed
         if (val == 0)
@@ -53,7 +49,7 @@ public class LifeSystem : SystemBase
             {
                 Entity e = entityManager.CreateEntity(cubeArchetype);
                 Translation p = new Translation();
-                p.Value = new float3(s, row, col);
+                p.Value = new float3(slice, row, col);
                 entityManager.SetComponentData<Translation>(e, p);
                 entityManager.AddSharedComponentData(e, cubeMesh);
                 cells.TryAdd(cell, e);
@@ -82,14 +78,12 @@ public class LifeSystem : SystemBase
     {
         cubeArchetype = entityManager.CreateArchetype(
                     typeof(Translation),
-                    typeof(Rotation),
-                    typeof(NonUniformScale),
                     typeof(LocalToWorld),
                     typeof(RenderBounds)
         );
 
-        Material material = (Material)Resources.Load("../Cube", typeof(Material));
-        GameObject c = Resources.Load<GameObject>("../Cube 1"); 
+        Material material = (Material)Resources.Load("Cube", typeof(Material));
+        GameObject c = Resources.Load<GameObject>("Cube 1"); 
         Mesh mesh = c.GetComponent<MeshFilter>().sharedMesh;
         cubeMesh = new RenderMesh
         {
