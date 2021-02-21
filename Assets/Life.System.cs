@@ -115,8 +115,7 @@ public class LifeSystem : SystemBase
 
     protected override void OnUpdate()
     {
-        var ecbpw = ecb.CreateCommandBuffer().AsParallelWriter();
-        
+        var ecbpw = ecb.CreateCommandBuffer().AsParallelWriter();   
         var lifeJob = new LifeJob()
         {
             cubePrefab = this.cubePrefab,
@@ -140,6 +139,7 @@ public class LifeSystem : SystemBase
         Dependency = JobHandle.CombineDependencies(Dependency, cnHandle);        
     
         ecb.AddJobHandleForProducer(Dependency);
+        
     }
 
     [BurstCompile]
@@ -205,6 +205,7 @@ public class LifeSystem : SystemBase
                 if (cells.TryGetValue(cell, out item))
                 {
                     ecb.DestroyEntity(i, item);
+                    cells.Remove(cell);
                 }                
             }
             else
@@ -251,7 +252,11 @@ public class LifeSystem : SystemBase
             int row = (i - (slice * size * size)) / (size);
             int col = (i - (row * size)) - (slice * size * size);
             
-            int count = CountNeighbours(slice, row, col);            
+            int count = CountNeighbours(slice, row, col);      
+            if (count > 0)
+            {
+                Debug.Log(count);
+            }      
             if (Get(slice, row, col) > 0)
             {
                 if (count == 2 || count == 3)
