@@ -82,14 +82,14 @@ public class LifeSystem : SystemBase
                     typeof(RenderBounds)
         );
 
-        Material material = (Material)Resources.Load("Cube", typeof(Material));
+        Material material = Resources.Load<Material>("LifeMaterial");
         GameObject c = Resources.Load<GameObject>("Cube 1"); 
         Mesh mesh = c.GetComponent<MeshFilter>().sharedMesh;
         cubeMesh = new RenderMesh
         {
             mesh = mesh,
             material = material
-        }; 
+        };         
     }
 
     private void InitialState()
@@ -109,7 +109,7 @@ public class LifeSystem : SystemBase
 
     protected override void OnUpdate()
     {
-        /*
+        
         var ecbpw = ecb.CreateCommandBuffer().AsParallelWriter();
         
         var lifeJob = new LifeJob()
@@ -119,13 +119,13 @@ public class LifeSystem : SystemBase
             next = this.next,
             cells = this.cells,
             size = this.size,
+            cubeMesh = cubeMesh,
             ecb = ecbpw
         };
 
         var jobHandle = lifeJob.Schedule(size * size * size, size, Dependency);
 
-        JobHandle.CombineDependencies(Dependency, jobHandle);
-        */
+        JobHandle.CombineDependencies(Dependency, jobHandle);        
     }
 
     [BurstCompile]
