@@ -14,7 +14,7 @@ public class LifeSystem : SystemBase
 {
     public static string[] rules;
     public string rule;
-    public int size = 50;
+    public int size = 10;
 
     private NativeArray<int> board;
     private NativeArray<int> next;
@@ -128,9 +128,33 @@ public class LifeSystem : SystemBase
         };
 
         var jobHandle = lifeJob.Schedule(size * size * size, size, Dependency);
-
         Dependency = JobHandle.CombineDependencies(Dependency, jobHandle);        
+    
+        var cnJob = new CopyNextToBoard()
+        {
+            next = this.next,
+            board = this.board
+        };
+
+        var cnHandle = lifeJob.Schedule(size * size * size, size, Dependency);
+        Dependency = JobHandle.CombineDependencies(Dependency, cnHandle);        
+    
         ecb.AddJobHandleForProducer(Dependency);
+    }
+
+    [BurstCompile]
+    struct CopyNextToBoard : IJobParallelFor
+    {
+        [NativeDisableParallelForRestriction]
+        public NativeArray<int> board;
+
+        public NativeArray<int> next;
+
+        public void Execute(int i)
+        {
+            board[i] = next[i];
+        }
+
     }
 
     [BurstCompile]
@@ -168,7 +192,7 @@ public class LifeSystem : SystemBase
         public void Set(int slice, int row, int col, int val, int i)
         {
             int cell = ToCell(size, slice, row, col);
-            board[cell] = val;
+            next[cell] = val;
 
             int s = (cell / (size * size));
             int r = (cell - (slice * size * size)) / (size);
@@ -227,8 +251,7 @@ public class LifeSystem : SystemBase
             int row = (i - (slice * size * size)) / (size);
             int col = (i - (row * size)) - (slice * size * size);
             
-            int count = CountNeighbours(slice, row, col);
-            Debug.Log(count);
+            int count = CountNeighbours(slice, row, col);            
             if (Get(slice, row, col) > 0)
             {
                 if (count == 2 || count == 3)
