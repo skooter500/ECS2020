@@ -70,6 +70,9 @@ public class LifeSystem : SystemBase
 
         ecb = World.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>();
 
+        entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
+
+
         CreateArchetype();
 
         InitialState();
@@ -77,7 +80,6 @@ public class LifeSystem : SystemBase
 
     private void CreateArchetype()
     {
-        
         cubeArchetype = entityManager.CreateArchetype(
                     typeof(Translation),
                     typeof(Rotation),
@@ -86,14 +88,14 @@ public class LifeSystem : SystemBase
                     typeof(RenderBounds)
         );
 
-        material = (Material)Resources.Load("Cube", typeof(Material));
-        Mesh mesh = Resources.Load<GameObject>("Cube").GetComponent<MeshFilter>().sharedMesh;
+        Material material = (Material)Resources.Load("../Cube", typeof(Material));
+        GameObject c = Resources.Load<GameObject>("../Cube 1"); 
+        Mesh mesh = c.GetComponent<MeshFilter>().sharedMesh;
         cubeMesh = new RenderMesh
         {
             mesh = mesh,
             material = material
-        };
-                
+        }; 
     }
 
     private void InitialState()
