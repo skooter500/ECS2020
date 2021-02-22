@@ -14,7 +14,7 @@ public class LifeSystem : SystemBase
 {
     public static string[] rules;
     public string rule;
-    public int size = 30;
+    public int size = 20;
 
     private NativeArray<int> board;
     private NativeArray<int> next;
@@ -140,11 +140,14 @@ public class LifeSystem : SystemBase
     }
 
     float timePassed = 0;
+    int generation = 0;
     protected override void OnUpdate()
     {
         timePassed += Time.DeltaTime;
         if (timePassed > 2.0f)
         {
+            Debug.Log(generation);
+            generation ++;
             timePassed = 0;
             var ecbpw = ecb.CreateCommandBuffer().AsParallelWriter();   
             var lifeJob = new LifeJob()
@@ -157,7 +160,7 @@ public class LifeSystem : SystemBase
                 ecb = ecbpw
             };
 
-            var jobHandle = lifeJob.Schedule(size * size * size, size, Dependency);
+            var jobHandle = lifeJob.Schedule(size * size * size, 1, Dependency);
             Dependency = JobHandle.CombineDependencies(Dependency, jobHandle);        
         
             var cnJob = new CopyNextToBoard()
@@ -166,7 +169,7 @@ public class LifeSystem : SystemBase
                 board = this.board
             };
 
-            var cnHandle = lifeJob.Schedule(size * size * size, size, Dependency);
+            var cnHandle = cnJob.Schedule(size * size * size, 1, Dependency);
             Dependency = JobHandle.CombineDependencies(Dependency, cnHandle);        
         
             ecb.AddJobHandleForProducer(Dependency);
@@ -176,7 +179,6 @@ public class LifeSystem : SystemBase
     [BurstCompile]
     struct CopyNextToBoard : IJobParallelFor
     {
-        [NativeDisableParallelForRestriction]
         public NativeArray<int> board;
 
         public NativeArray<int> next;
