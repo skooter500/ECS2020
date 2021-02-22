@@ -33,6 +33,7 @@ public class LifeSystem : SystemBase
     private void Set(int slice, int row, int col, int val)
     {
         int cell = LifeJob.ToCell(size, slice, row, col);
+        Debug.Log("Cell: " + cell);
         board[cell] = val;
         
         // Do we need an entity created or destroyed
@@ -208,7 +209,8 @@ public class LifeSystem : SystemBase
             {
                 Entity item;                
                 if (cells.TryGetValue(cell, out item))
-                {
+                {                    
+                    Debug.LogFormat("Destroying cell " + s + "," + r +", " + c);
                     ecb.DestroyEntity(i, item);
                     cells.Remove(cell);
                 }                
@@ -218,6 +220,7 @@ public class LifeSystem : SystemBase
                 Entity item;
                 if (!cells.TryGetValue(cell, out item))
                 {
+                    Debug.LogFormat("Creating cell " + s + "," + r +", " + c);
                     Entity e = ecb.Instantiate(i, cubePrefab);
                     Translation p = new Translation();
                     p.Value = new float3(s, row, col);
@@ -230,14 +233,14 @@ public class LifeSystem : SystemBase
         private int CountNeighbours(int slice, int row, int col)
         {
             int count = 0;
-            int s = 0;
-            //for (int s = slice - 1; s <= slice + 1; s++)
+            
+            for (int s = slice - 1; s <= slice + 1; s++)
             {
                 for (int r = row - 1; r <= row + 1; r++)
                 {
                     for (int c = col - 1; c <= col + 1; c++)
-                    {
-                        if (r != row && c != col && s != slice)
+                    {                        
+                        if (! (r == row && c == col && s == slice))
                         {
                             if (Get(s, r, c) > 0)
                             {
@@ -256,16 +259,18 @@ public class LifeSystem : SystemBase
             int slice = (i / (size * size));
             int row = (i - (slice * size * size)) / (size);
             int col = (i - (row * size)) - (slice * size * size);
-            
-            int count = CountNeighbours(slice, row, col);      
+            //Debug.LogFormat("i: {0} slice {1} row {2} col {3}", i, slice, row, col);
+            int count = CountNeighbours(slice, row, col);    
+
             if (count > 0)
             {
-                //Debug.Log("" + count);
-            }      
+                Debug.LogFormat("i: {0} slice {1} row {2} col {3} index {4} count {5}", i, slice, row, col, ToCell(size, slice, row, col), count);                
+            }
             if (Get(slice, row, col) > 0)
             {
                 if (count == 2 || count == 3)
                 {
+                    
                     Set(slice, row, col, 255, i);
                 }
                 else
