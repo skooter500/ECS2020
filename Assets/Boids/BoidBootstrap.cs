@@ -88,7 +88,6 @@ namespace ew
 
         public void DestroyEntities()
         {
-            Debug.Log("Destroying all entities");
             if (!isContainer)
             {
                 entityManager.DestroyEntity(allTheBoids);

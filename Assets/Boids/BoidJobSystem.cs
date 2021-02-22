@@ -102,7 +102,6 @@ namespace ew
             Instance = this;
             bootstrap = GameObject.FindObjectOfType<BoidBootstrap>();
             Enabled = false;
-            Debug.Log("BoidBootstrap.MAX_BOIDS=" + BoidBootstrap.MAX_BOIDS);
             neighbours = new NativeArray<int>(BoidBootstrap.MAX_BOIDS * BoidBootstrap.MAX_NEIGHBOURS, Allocator.Persistent);
             positions = new NativeArray<Vector3>(BoidBootstrap.MAX_BOIDS, Allocator.Persistent);
             rotations = new NativeArray<Quaternion>(BoidBootstrap.MAX_BOIDS, Allocator.Persistent);

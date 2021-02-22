@@ -14,7 +14,7 @@ public class LifeSystem : SystemBase
 {
     public static string[] rules;
     public string rule;
-    public int size = 10;
+    public int size = 30;
 
     private NativeArray<int> board;
     private NativeArray<int> next;
@@ -30,10 +30,32 @@ public class LifeSystem : SystemBase
 
     EntityManager entityManager;
 
+    private void Randomize()
+    {
+        for(int slice = 0 ; slice < size ; slice ++)
+        {
+            for(int row = 0 ; row < size ; row ++)
+            {
+                for(int col = 0 ; col < size ; col ++)
+                {
+                    float dice = UnityEngine.Random.Range(0.0f, 1.0f);
+                    if (dice > 0.5f)
+                    {
+                        Set(slice, row, col, 255);
+                    }
+                    else
+                    {
+                        Set(slice, row, col, 0);
+                    }
+                }
+            }
+            
+        }
+    }
+
     private void Set(int slice, int row, int col, int val)
     {
         int cell = LifeJob.ToCell(size, slice, row, col);
-        Debug.Log("Cell: " + cell);
         board[cell] = val;
         
         // Do we need an entity created or destroyed
@@ -101,10 +123,13 @@ public class LifeSystem : SystemBase
 
     private void InitialState()
     {
+        Randomize();
+        /*
         for(int col = 0 ; col < size ; col ++)
         {
             Set(0, size / 2, col, 255);
         }
+        */
     }
 
     protected override void OnDestroy()
@@ -118,7 +143,7 @@ public class LifeSystem : SystemBase
     protected override void OnUpdate()
     {
         timePassed += Time.DeltaTime;
-        if (timePassed > 0.5f)
+        if (timePassed > 2.0f)
         {
             timePassed = 0;
             var ecbpw = ecb.CreateCommandBuffer().AsParallelWriter();   
@@ -210,7 +235,6 @@ public class LifeSystem : SystemBase
                 Entity item;                
                 if (cells.TryGetValue(cell, out item))
                 {                    
-                    Debug.LogFormat("Destroying cell " + s + "," + r +", " + c);
                     ecb.DestroyEntity(i, item);
                     cells.Remove(cell);
                 }                
@@ -220,7 +244,6 @@ public class LifeSystem : SystemBase
                 Entity item;
                 if (!cells.TryGetValue(cell, out item))
                 {
-                    Debug.LogFormat("Creating cell " + s + "," + r +", " + c);
                     Entity e = ecb.Instantiate(i, cubePrefab);
                     Translation p = new Translation();
                     p.Value = new float3(s, row, col);
@@ -262,13 +285,9 @@ public class LifeSystem : SystemBase
             //Debug.LogFormat("i: {0} slice {1} row {2} col {3}", i, slice, row, col);
             int count = CountNeighbours(slice, row, col);    
 
-            if (count > 0)
-            {
-                Debug.LogFormat("i: {0} slice {1} row {2} col {3} index {4} count {5}", i, slice, row, col, ToCell(size, slice, row, col), count);                
-            }
             if (Get(slice, row, col) > 0)
             {
-                if (count == 2 || count == 3)
+                if (count == 4 || count == 5)
                 {
                     
                     Set(slice, row, col, 255, i);
@@ -278,7 +297,7 @@ public class LifeSystem : SystemBase
                     Set(slice, row, col, 0, i);
                 }
             }
-            else if (count == 3)
+            else if (count == 5)
             {
                 Set(slice, row, col, 255, i);
             }
