@@ -113,33 +113,38 @@ public class LifeSystem : SystemBase
         cells.Dispose();
     }
 
+    float timePassed = 0;
     protected override void OnUpdate()
     {
-        var ecbpw = ecb.CreateCommandBuffer().AsParallelWriter();   
-        var lifeJob = new LifeJob()
+        timePassed += Time.DeltaTime;
+        if (timePassed > 0.5f)
         {
-            cubePrefab = this.cubePrefab,
-            board = this.board,
-            next = this.next,
-            cells = this.cells,
-            size = this.size,
-            ecb = ecbpw
-        };
+            timePassed = 0;
+            var ecbpw = ecb.CreateCommandBuffer().AsParallelWriter();   
+            var lifeJob = new LifeJob()
+            {
+                cubePrefab = this.cubePrefab,
+                board = this.board,
+                next = this.next,
+                cells = this.cells,
+                size = this.size,
+                ecb = ecbpw
+            };
 
-        var jobHandle = lifeJob.Schedule(size * size * size, size, Dependency);
-        Dependency = JobHandle.CombineDependencies(Dependency, jobHandle);        
-    
-        var cnJob = new CopyNextToBoard()
-        {
-            next = this.next,
-            board = this.board
-        };
-
-        var cnHandle = lifeJob.Schedule(size * size * size, size, Dependency);
-        Dependency = JobHandle.CombineDependencies(Dependency, cnHandle);        
-    
-        ecb.AddJobHandleForProducer(Dependency);
+            var jobHandle = lifeJob.Schedule(size * size * size, size, Dependency);
+            Dependency = JobHandle.CombineDependencies(Dependency, jobHandle);        
         
+            var cnJob = new CopyNextToBoard()
+            {
+                next = this.next,
+                board = this.board
+            };
+
+            var cnHandle = lifeJob.Schedule(size * size * size, size, Dependency);
+            Dependency = JobHandle.CombineDependencies(Dependency, cnHandle);        
+        
+            ecb.AddJobHandleForProducer(Dependency);
+        }        
     }
 
     [BurstCompile]
@@ -255,7 +260,7 @@ public class LifeSystem : SystemBase
             int count = CountNeighbours(slice, row, col);      
             if (count > 0)
             {
-                Debug.Log(count);
+                //Debug.Log("" + count);
             }      
             if (Get(slice, row, col) > 0)
             {
