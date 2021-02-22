@@ -106,6 +106,7 @@ public class LifeSystem : SystemBase
                     typeof(LocalToWorld),
                     typeof(RenderBounds),
                     typeof(RenderMesh)
+                    
         );
 
         Material material = Resources.Load<Material>("LifeMaterial");
@@ -123,13 +124,14 @@ public class LifeSystem : SystemBase
 
     private void InitialState()
     {
-        Randomize();
-        /*
+        //Randomize();
+        
         for(int col = 0 ; col < size ; col ++)
         {
             Set(0, size / 2, col, 255);
+            Set(0, (size / 2) + 1, col, 255);
         }
-        */
+        
     }
 
     protected override void OnDestroy()
@@ -146,10 +148,10 @@ public class LifeSystem : SystemBase
         timePassed += Time.DeltaTime;
         if (timePassed > 2.0f)
         {
+            var ecbpw = ecb.CreateCommandBuffer().AsParallelWriter();               
             Debug.Log(generation);
             generation ++;
             timePassed = 0;
-            var ecbpw = ecb.CreateCommandBuffer().AsParallelWriter();   
             var lifeJob = new LifeJob()
             {
                 cubePrefab = this.cubePrefab,
@@ -204,7 +206,10 @@ public class LifeSystem : SystemBase
 
         public EntityCommandBuffer.ParallelWriter ecb;
 
-        public Entity cubePrefab;
+        public Entity cubePrefab; 
+
+        //public EntityArchetype cubeArchetype;
+        //public RenderMesh cubeMesh;
 
         public int size;
 
@@ -236,7 +241,8 @@ public class LifeSystem : SystemBase
             {
                 Entity item;                
                 if (cells.TryGetValue(cell, out item))
-                {                    
+                {   
+                    Debug.Log("Deleting an entity");                                     
                     ecb.DestroyEntity(i, item);
                     cells.Remove(cell);
                 }                
@@ -246,10 +252,13 @@ public class LifeSystem : SystemBase
                 Entity item;
                 if (!cells.TryGetValue(cell, out item))
                 {
+                    Debug.Log("Creating an entity");
                     Entity e = ecb.Instantiate(i, cubePrefab);
+                    //Entity e = ecb.CreateEntity(i, cubeArchetype);
                     Translation p = new Translation();
                     p.Value = new float3(s, row, col);
                     ecb.SetComponent<Translation>(i, e, p);
+                    //ecb.AddSharedComponent(i, e, cubeMesh);
                     cells.TryAdd(cell, e);
                 }
             }
