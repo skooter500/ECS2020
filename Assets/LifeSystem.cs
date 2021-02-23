@@ -60,8 +60,7 @@ public class LifeSystem : SystemBase
                         Set(slice, row, col, 0);
                     }
                 }
-            }
-            
+            }            
         }
     }
 
@@ -180,12 +179,27 @@ public class LifeSystem : SystemBase
 
         
         if (timePassed > 2.0f)
-        {
-            newEntities.Clear();
+        {            
             var ecbpw = ecb.CreateCommandBuffer().AsParallelWriter();               
             Debug.Log(generation);
             generation ++;
             timePassed = 0;
+
+            // Create the new cells
+            NativeArray<Entity> newEntitiesCreate = new NativeArray<Entity>(newEntities.Length, Allocator.Temp);
+            Debug.Log("Creating " + newEntitiesCreate.Length + " entities");
+            entityManager.CreateEntity(newCubeArchetype, newEntitiesCreate);
+            NativeArray<Vector3> newEntitiesLocal = newEntities;
+            var setPositionsHandle = Entities
+                .ForEach((Entity e, int entityInQueryIndex, ref NeedsPosition c, ref Translation p) =>
+                {
+                    ecbpw.RemoveComponent<NeedsPosition>(entityInQueryIndex, e);
+                    p.Value = newEntitiesLocal[entityInQueryIndex];
+                    Debug.Log(p.Value);
+                })
+                .ScheduleParallel(this.Dependency);
+            Dependency = JobHandle.CombineDependencies(Dependency, setPositionsHandle);
+            
 
     	    // Delete the dead cells            
             NativeHashMap<int, Entity> localCells = cells;
@@ -201,7 +215,14 @@ public class LifeSystem : SystemBase
             })
             .ScheduleParallel(this.Dependency);
             Dependency = JobHandle.CombineDependencies(Dependency, deleteHandle);
+            ecb.AddJobHandleForProducer(Dependency);
 
+            // Create the new cells
+            //NativeArray<Entity> newEntitiesCreate = new NativeArray<Entity>(newEntities.Length, Allocator.Temp);
+            //entityManager.CreateEntity(newCubeArchetype, newEntitiesCreate);
+            //NativeArray<Vector3> newEntitiesLocal = newEntities;
+            /*
+            */
             var lifeJob = new LifeJob()
             {
                 cubePrefab = this.cubePrefab,
