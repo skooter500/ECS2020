@@ -194,14 +194,16 @@ public class LifeSystem : SystemBase
                 .ForEach((Entity e, int entityInQueryIndex, ref NeedsPosition c, ref Translation p) =>
                 {
                     ecbpw.RemoveComponent<NeedsPosition>(entityInQueryIndex, e);
-                    p.Value = newEntitiesLocal[entityInQueryIndex];
-                    Debug.Log(p.Value);
+                    Vector3 pos = newEntitiesLocal[entityInQueryIndex];
+                    pos.y += 100;
+                    p.Value = pos;                    
                 })
                 .ScheduleParallel(this.Dependency);
             Dependency = JobHandle.CombineDependencies(Dependency, setPositionsHandle);
+            ecb.AddJobHandleForProducer(Dependency);
             
-
-    	    // Delete the dead cells            
+    	    // Delete the dead cells      
+            /*      
             NativeHashMap<int, Entity> localCells = cells;
             var deleteHandle = Entities
                 .WithNativeDisableParallelForRestriction(localCells)
@@ -216,7 +218,7 @@ public class LifeSystem : SystemBase
             .ScheduleParallel(this.Dependency);
             Dependency = JobHandle.CombineDependencies(Dependency, deleteHandle);
             ecb.AddJobHandleForProducer(Dependency);
-
+            */
             // Create the new cells
             //NativeArray<Entity> newEntitiesCreate = new NativeArray<Entity>(newEntities.Length, Allocator.Temp);
             //entityManager.CreateEntity(newCubeArchetype, newEntitiesCreate);
@@ -344,7 +346,6 @@ public class LifeSystem : SystemBase
                 Entity item;                
                 if (cells.TryGetValue(cell, out item))
                 {   
-                    Debug.Log("Deleting an entity");                                     
                     //ecb.DestroyEntity(i, item);
                     cells.Remove(cell);
                 }                
@@ -354,7 +355,6 @@ public class LifeSystem : SystemBase
                 Entity item;
                 if (!cells.TryGetValue(cell, out item))
                 {
-                    Debug.Log("Adding ");
                     newEntities.Add(new Vector3(slice, row, col));
                     /*
                     //Entity e = ecb.Instantiate(i, cubePrefab);
