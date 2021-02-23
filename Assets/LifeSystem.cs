@@ -10,6 +10,16 @@ using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine.SceneManagement;
 
+struct Cell:IComponentData
+{
+    public int cellId;
+}
+
+struct NeedsPosition:IComponentData
+{
+
+}
+
 public class LifeSystem : SystemBase
 {
     public static string[] rules;
@@ -19,12 +29,14 @@ public class LifeSystem : SystemBase
     private NativeArray<int> board;
     private NativeArray<int> next;
     private NativeHashMap<int, Entity> cells;
+    NativeList<Vector3> newEntities;
 
     private RenderMesh cubeMesh;
     public Material material;
 
     EndSimulationEntityCommandBufferSystem ecb;
     EntityArchetype cubeArchetype;
+    EntityArchetype newCubeArchetype;
 
     Entity cubePrefab;
 
@@ -75,7 +87,9 @@ public class LifeSystem : SystemBase
                 Entity e = entityManager.CreateEntity(cubeArchetype);
                 Translation p = new Translation();
                 p.Value = new float3(slice, row, col);
+                int cellId = LifeJob.ToCell(size, slice, row, col);
                 entityManager.SetComponentData<Translation>(e, p);
+                entityManager.SetComponentData<Cell>(e, new Cell(){cellId = cellId});
                 entityManager.AddSharedComponentData(e, cubeMesh);
                 cells.TryAdd(cell, e);
             }
@@ -87,6 +101,10 @@ public class LifeSystem : SystemBase
         board = new NativeArray<int>((int)Mathf.Pow(size, 3), Allocator.Persistent);
         next = new NativeArray<int>((int)Mathf.Pow(size, 3), Allocator.Persistent);
         cells = new NativeHashMap<int, Entity>((int)Mathf.Pow(size, 3), Allocator.Persistent);
+
+        newEntities = new NativeList<Vector3>(Allocator.Persistent);
+
+
         //Enabled = false;
 
         ecb = World.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>();
@@ -105,6 +123,17 @@ public class LifeSystem : SystemBase
                     typeof(Translation),
                     typeof(LocalToWorld),
                     typeof(RenderBounds),
+                    typeof(Cell),
+                    typeof(RenderMesh)
+                    
+        );
+
+        newCubeArchetype = entityManager.CreateArchetype(
+                    typeof(Translation),
+                    typeof(LocalToWorld),
+                    typeof(RenderBounds),
+                    typeof(Cell),
+                    typeof(NeedsPosition),
                     typeof(RenderMesh)
                     
         );
@@ -124,13 +153,14 @@ public class LifeSystem : SystemBase
 
     private void InitialState()
     {
-        //Randomize();
+        Randomize();
         
-        for(int col = 0 ; col < size ; col ++)
+        /*for(int col = 0 ; col < size ; col ++)
         {
             Set(0, size / 2, col, 255);
             Set(0, (size / 2) + 1, col, 255);
         }
+        */
         
     }
 
@@ -139,6 +169,7 @@ public class LifeSystem : SystemBase
         board.Dispose();
         next.Dispose();
         cells.Dispose();
+        newEntities.Dispose();
     }
 
     float timePassed = 0;
@@ -146,24 +177,55 @@ public class LifeSystem : SystemBase
     protected override void OnUpdate()
     {
         timePassed += Time.DeltaTime;
+
+        
         if (timePassed > 2.0f)
         {
+            newEntities.Clear();
             var ecbpw = ecb.CreateCommandBuffer().AsParallelWriter();               
             Debug.Log(generation);
             generation ++;
             timePassed = 0;
+
+    	    // Delete the dead cells            
+            NativeHashMap<int, Entity> localCells = cells;
+            var deleteHandle = Entities
+                .WithNativeDisableParallelForRestriction(localCells)
+                .ForEach((Entity e, int entityInQueryIndex, ref Cell c) =>
+            {
+                Entity item;
+                if (!localCells.TryGetValue(c.cellId, out item))
+                {
+                    ecbpw.DestroyEntity(entityInQueryIndex, e);
+                }                
+            })
+            .ScheduleParallel(this.Dependency);
+            Dependency = JobHandle.CombineDependencies(Dependency, deleteHandle);
+
             var lifeJob = new LifeJob()
             {
                 cubePrefab = this.cubePrefab,
+                cubeArchetype = this.cubeArchetype,
+                newEntities = newEntities,
                 board = this.board,
                 next = this.next,
                 cells = this.cells,
-                size = this.size,
-                ecb = ecbpw
+                size = this.size
             };
 
             var jobHandle = lifeJob.Schedule(size * size * size, 1, Dependency);
-            Dependency = JobHandle.CombineDependencies(Dependency, jobHandle);        
+            Dependency = JobHandle.CombineDependencies(Dependency, jobHandle);   
+
+            /*
+            var ceJob = new CreateEntitiesJob()
+            {
+                cubePrefab = cubePrefab,
+                newEntities = newEntities,
+                ecb = ecbpw
+            };
+            var ceHandle = ceJob.Schedule(newEntities.Length, 1, Dependency);
+            Dependency = JobHandle.CombineDependencies(Dependency, ceHandle);   
+            */
         
             var cnJob = new CopyNextToBoard()
             {
@@ -193,6 +255,28 @@ public class LifeSystem : SystemBase
     }
 
     [BurstCompile]
+    struct CreateEntitiesJob: IJobParallelFor
+    {
+        public NativeList<Vector3> newEntities;
+        public EntityCommandBuffer.ParallelWriter ecb;
+        public Entity cubePrefab; 
+
+        public void Execute(int i)
+        {
+            Vector3 pos = newEntities[i];
+            Entity e = ecb.Instantiate(i, cubePrefab);
+            Translation p = new Translation();
+            p.Value = new float3(pos.x, pos.y, pos.z);
+            ecb.SetComponent<Translation>(i, e, p);
+            //ecb.AddSharedComponent(i, e, cubeMesh);
+        }
+
+    }
+
+    //IJobEntityBatchWithIndex
+    //Create entities with native array
+
+    [BurstCompile]
     struct LifeJob : IJobParallelFor
     {
         [NativeDisableParallelForRestriction]
@@ -204,11 +288,12 @@ public class LifeSystem : SystemBase
         [NativeDisableParallelForRestriction]
         public NativeHashMap<int, Entity> cells;
 
-        public EntityCommandBuffer.ParallelWriter ecb;
+        [NativeDisableParallelForRestriction]        
+        public NativeList<Vector3> newEntities;
 
         public Entity cubePrefab; 
 
-        //public EntityArchetype cubeArchetype;
+        public EntityArchetype cubeArchetype;
         //public RenderMesh cubeMesh;
 
         public int size;
@@ -231,10 +316,6 @@ public class LifeSystem : SystemBase
         {
             int cell = ToCell(size, slice, row, col);
             next[cell] = val;
-
-            int s = (cell / (size * size));
-            int r = (cell - (slice * size * size)) / (size);
-            int c = (cell - (row * size)) - (slice * size * size);
             
             // Do we need an entity created or destroyed
             if (val == 0)
@@ -243,7 +324,7 @@ public class LifeSystem : SystemBase
                 if (cells.TryGetValue(cell, out item))
                 {   
                     Debug.Log("Deleting an entity");                                     
-                    ecb.DestroyEntity(i, item);
+                    //ecb.DestroyEntity(i, item);
                     cells.Remove(cell);
                 }                
             }
@@ -252,14 +333,17 @@ public class LifeSystem : SystemBase
                 Entity item;
                 if (!cells.TryGetValue(cell, out item))
                 {
-                    Debug.Log("Creating an entity");
-                    Entity e = ecb.Instantiate(i, cubePrefab);
-                    //Entity e = ecb.CreateEntity(i, cubeArchetype);
+                    Debug.Log("Adding ");
+                    newEntities.Add(new Vector3(slice, row, col));
+                    /*
+                    //Entity e = ecb.Instantiate(i, cubePrefab);
+                    Entity e = ecb.CreateEntity(i, cubeArchetype);
                     Translation p = new Translation();
                     p.Value = new float3(s, row, col);
                     ecb.SetComponent<Translation>(i, e, p);
                     //ecb.AddSharedComponent(i, e, cubeMesh);
                     cells.TryAdd(cell, e);
+                    */
                 }
             }
         }
