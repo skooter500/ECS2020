@@ -34,7 +34,7 @@ public class LifeSystem : SystemBase
     private RenderMesh cubeMesh;
     public Material material;
 
-    EndSimulationEntityCommandBufferSystem ecb;
+    EndSimulationEntityCommandBufferSystem ecbSystem;
     EntityArchetype cubeArchetype;
     EntityArchetype newCubeArchetype;
 
@@ -86,9 +86,8 @@ public class LifeSystem : SystemBase
                 Entity e = entityManager.CreateEntity(cubeArchetype);
                 Translation p = new Translation();
                 p.Value = new float3(slice, row, col);
-                int cellId = LifeJob.ToCell(size, slice, row, col);
                 entityManager.SetComponentData<Translation>(e, p);
-                entityManager.SetComponentData<Cell>(e, new Cell(){cellId = cellId});
+                entityManager.SetComponentData<Cell>(e, new Cell(){cellId = cell});
                 entityManager.AddSharedComponentData(e, cubeMesh);
                 cells.TryAdd(cell, e);
             }
@@ -106,7 +105,7 @@ public class LifeSystem : SystemBase
 
         //Enabled = false;
 
-        ecb = World.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>();
+        ecbSystem = World.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>();
 
         entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
 
@@ -145,9 +144,6 @@ public class LifeSystem : SystemBase
             mesh = mesh,
             material = material
         };
-
-        cubePrefab = entityManager.CreateEntity(cubeArchetype);
-        entityManager.SetSharedComponentData(cubePrefab, cubeMesh);
     }
 
     private void InitialState()
@@ -177,54 +173,61 @@ public class LifeSystem : SystemBase
     {
         timePassed += Time.DeltaTime;
 
-        
         if (timePassed > 2.0f)
         {            
-            var ecbpw = ecb.CreateCommandBuffer().AsParallelWriter();               
+            
+            var ecbpw = ecbSystem.CreateCommandBuffer().AsParallelWriter();               
             Debug.Log(generation);
             generation ++;
             timePassed = 0;
-
+            
+            /*
             // Create the new cells
             NativeArray<Entity> newEntitiesCreate = new NativeArray<Entity>(newEntities.Length, Allocator.Temp);
             Debug.Log("Creating " + newEntitiesCreate.Length + " entities");
-            entityManager.CreateEntity(newCubeArchetype, newEntitiesCreate);
+            entityManager.CreateEntity(newCubeArchetype, newEntitiesCreate);     
+            for(int i = 0 ; i < newEntitiesCreate.Length ; i ++)
+            {
+                Entity e = newEntitiesCreate[i];
+                Vector3 pos = newEntities[i];
+                entityManager.SetComponentData<Translation>(e, new Translation{Value = pos});
+                int cellId = LifeJob.ToCell(size, (int)pos.x, (int)pos.y, (int)pos.z);
+                entityManager.SetComponentData<Cell>(e, new Cell{cellId = cellId});
+                entityManager.AddSharedComponentData(e, cubeMesh);
+            } 
+            */      
+            /*
             NativeArray<Vector3> newEntitiesLocal = newEntities;
+            int size = this.size;
             var setPositionsHandle = Entities
-                .ForEach((Entity e, int entityInQueryIndex, ref NeedsPosition c, ref Translation p) =>
+                .ForEach((Entity e, int entityInQueryIndex, ref NeedsPosition c, ref Translation p, ref Cell cell) =>
                 {
                     ecbpw.RemoveComponent<NeedsPosition>(entityInQueryIndex, e);
                     Vector3 pos = newEntitiesLocal[entityInQueryIndex];
-                    pos.y += 100;
-                    p.Value = pos;                    
+                    p.Value = pos;
+                    int cellId = LifeJob.ToCell(size, (int)pos.x, (int)pos.y, (int)pos.z);
+                    ecbpw.SetComponent<Cell>(entityInQueryIndex, e, new Cell{cellId = cellId});
                 })
-                .ScheduleParallel(this.Dependency);
+                .Schedule(this.Dependency);
             Dependency = JobHandle.CombineDependencies(Dependency, setPositionsHandle);
-            ecb.AddJobHandleForProducer(Dependency);
+            */
             
-    	    // Delete the dead cells      
-            /*      
+            // Delete the dead cells                        
             NativeHashMap<int, Entity> localCells = cells;
             var deleteHandle = Entities
                 .WithNativeDisableParallelForRestriction(localCells)
                 .ForEach((Entity e, int entityInQueryIndex, ref Cell c) =>
-            {
-                Entity item;
-                if (!localCells.TryGetValue(c.cellId, out item))
                 {
-                    ecbpw.DestroyEntity(entityInQueryIndex, e);
-                }                
-            })
-            .ScheduleParallel(this.Dependency);
+                    Entity item;
+                    if (!localCells.TryGetValue(c.cellId, out item))
+                    {
+                        Debug.Log("Destroying entity: " + c.cellId);
+                        ecbpw.DestroyEntity(entityInQueryIndex, e);
+                    }                
+                })
+                .Schedule(this.Dependency);
             Dependency = JobHandle.CombineDependencies(Dependency, deleteHandle);
-            ecb.AddJobHandleForProducer(Dependency);
-            */
-            // Create the new cells
-            //NativeArray<Entity> newEntitiesCreate = new NativeArray<Entity>(newEntities.Length, Allocator.Temp);
-            //entityManager.CreateEntity(newCubeArchetype, newEntitiesCreate);
-            //NativeArray<Vector3> newEntitiesLocal = newEntities;
-            /*
-            */
+            
             var lifeJob = new LifeJob()
             {
                 cubePrefab = this.cubePrefab,
@@ -259,7 +262,7 @@ public class LifeSystem : SystemBase
             var cnHandle = cnJob.Schedule(size * size * size, 1, Dependency);
             Dependency = JobHandle.CombineDependencies(Dependency, cnHandle);        
         
-            ecb.AddJobHandleForProducer(Dependency);
+            ecbSystem.AddJobHandleForProducer(Dependency);
         }        
     }
 
