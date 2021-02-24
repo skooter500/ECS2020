@@ -33,6 +33,8 @@ public class LifeSystem : SystemBase
 
     EntityManager entityManager;
 
+    EntityQuery cellQuery;
+
     internal static readonly AABB OutOfBounds = new AABB
     {
         Center = new float3(-1000000, -1000000, -1000000),
@@ -52,22 +54,15 @@ public class LifeSystem : SystemBase
                     float dice = UnityEngine.Random.Range(0.0f, 1.0f);
                     if (dice > 0.5f)
                     {
-                        Set(slice, row, col, 255);
+                        Set(ref board, size, slice, row, col, 255);
                     }
                     else
                     {
-                        Set(slice, row, col, 0);
+                        Set(ref board, size, slice, row, col, 0);
                     }
                 }
             }
         }
-    }
-
-    private void Set(int slice, int row, int col, int val)
-    {
-        int cell = ToCell(size, slice, row, col);
-        board[cell] = val;
-
     }
 
     protected override void OnCreate()
@@ -91,6 +86,15 @@ public class LifeSystem : SystemBase
     private void CreateEntities()
     {
         entityManager.CreateEntity(cubeArchetype, entities);
+
+        cellQuery = GetEntityQuery(new EntityQueryDesc()
+            {
+                All = new ComponentType[] {
+                    ComponentType.ReadOnly<Cell>()
+                }                
+            });
+
+        entityManager.AddSharedComponentData(cellQuery, cubeMesh);
     }
 
     private void CreateArchetype()
@@ -99,8 +103,7 @@ public class LifeSystem : SystemBase
                     typeof(Translation),
                     typeof(LocalToWorld),
                     typeof(RenderBounds),
-                    typeof(Cell),
-                    typeof(RenderMesh)
+                    typeof(Cell)
 
         );
 
@@ -118,12 +121,13 @@ public class LifeSystem : SystemBase
     {
         Randomize();
 
-        /*for(int col = 0 ; col < size ; col ++)
+        for(int i = 0 ; i < size ; i ++)
         {
-            Set(0, size / 2, col, 255);
-            Set(0, (size / 2) + 1, col, 255);
+            Set(ref board, size, size / 2, size / 2, i, 255);
+
+            //Set(ref board, size, 0, size / 2, i, 255);
         }
-        */
+        
 
     }
 
@@ -152,7 +156,7 @@ public class LifeSystem : SystemBase
         return (board[ToCell(size, slice, row, col)]);
     }
 
-    public static void Set(ref NativeArray<int> board, int size, int slice, int row, int col, int val, int i)
+    public static void Set(ref NativeArray<int> board, int size, int slice, int row, int col, int val)
     {
         int cell = ToCell(size, slice, row, col);
         board[cell] = val;
@@ -187,10 +191,10 @@ public class LifeSystem : SystemBase
 
         NativeArray<int> board = this.board;
         NativeArray<int> next = this.next;
-        int size = this.size;
-        
+        int size = this.size;        
         if (!populated)
         {
+            Debug.Log("populating!");
             populated = true;
             JobHandle popHandle = Entities.ForEach((int entityInQueryIndex, ref Cell c, ref Translation p) =>
             {
@@ -204,7 +208,7 @@ public class LifeSystem : SystemBase
                 }
                 else
                 {
-                    p.Value = new float3(-1000000, -1000000, -1000000);
+                    p.Value = PositionOutOfBounds;
                 }
             })
             .ScheduleParallel(Dependency);
@@ -213,6 +217,7 @@ public class LifeSystem : SystemBase
         
         if (timePassed > 2.0f)
         {
+            Debug.Log("Generation: " + generation);
             generation++;
             timePassed = 0;
 
@@ -230,22 +235,26 @@ public class LifeSystem : SystemBase
                         if (count == 4 || count == 5)
                         {
 
-                            Set(ref next, size, slice, row, col, 255, i);
+                            Set(ref next, size, slice, row, col, 255);
+                            p.Value = new float3(slice, row, col);
                         }
                         else
                         {
-                            Set(ref next, size, slice, row, col, 0, i);
+                            Set(ref next, size, slice, row, col, 0);
                             p.Value = PositionOutOfBounds;
                         }
                     }
-                    else if (count == 5)
-                    {
-                        Set(ref next, size, slice, row, col, 255, i);
-                    }
-                    else
-                    {
-                        Set(ref next, size, slice, row, col, 0, i);
-                        p.Value = PositionOutOfBounds;
+                    else 
+                    {   if (count == 5)
+                        {
+                            Set(ref next, size, slice, row, col, 255);
+                            p.Value = new float3(slice, row, col);
+                        }
+                        else
+                        {
+                            Set(ref next, size, slice, row, col, 0);
+                            p.Value = PositionOutOfBounds;
+                        }
                     }
                 })
                 .ScheduleParallel(Dependency);        
@@ -259,6 +268,7 @@ public class LifeSystem : SystemBase
 
             var cnHandle = cnJob.Schedule(size * size * size, 1, Dependency);
             Dependency = JobHandle.CombineDependencies(Dependency, cnHandle); 
+            
         }
     }
 
