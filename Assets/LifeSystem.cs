@@ -47,21 +47,24 @@ public class LifeSystem : SystemBase
 
     private void Randomize()
     {
-        for (int slice = 0; slice < size; slice++)
+        int halfSize = size / 2;
+        int centerBit = (int)(4);
+        for (int slice = halfSize - centerBit; slice <= halfSize + centerBit; slice++)
         {
-            for (int row = 0; row < size; row++)
+            for (int row = halfSize - centerBit; row <= halfSize + centerBit; row++)
             {
-                for (int col = 0; col < size; col++)
+                for (int col = halfSize - centerBit; col <= halfSize + centerBit; col++)
                 {
                     float dice = UnityEngine.Random.Range(0.0f, 1.0f);
-                    if (dice > 0.5f)
+                    //if (dice > 0.5f)
                     {
-                        Set(ref board, size, slice, row, col, 255);
+                        Set(ref board, size, slice, row, col, 4);
                     }
+                    /*
                     else
                     {
                         Set(ref board, size, slice, row, col, 0);
-                    }
+                    }*/
                 }
             }
         }
@@ -135,7 +138,17 @@ public class LifeSystem : SystemBase
 
     public void InitialState()
     {
-        Randomize();
+        //Randomize();
+        for(int i = 0 ; i < size ; i ++)
+        {
+            Set(ref board, size, size / 2, size / 2, i, 4);
+            Set(ref board, size, i, size / 2, size / 2, 4);
+            Set(ref board, size, size / 2, i, size / 2, 4);
+
+            Set(ref board, size, size / 2 + 1, size / 2, i, 4);
+            Set(ref board, size, i, size / 2, size / 2 + 1, 4);
+            Set(ref board, size, size / 2, i, size / 2 + 1, 4);
+        }
 
     }
 
@@ -174,8 +187,7 @@ public class LifeSystem : SystemBase
     {
         int count = 0;
 
-        //for (int s = slice - 1; s <= slice + 1; s++)
-        int s = slice;
+        for (int s = slice - 1; s <= slice + 1; s++)        
         {
             for (int r = row - 1; r <= row + 1; r++)
             {
@@ -183,7 +195,7 @@ public class LifeSystem : SystemBase
                 {
                     if (!(r == row && c == col && s == slice))
                     {
-                        if (Get(ref board, size, s, r, c) > 0)
+                        if (Get(ref board, size, s, r, c) == 4)
                         {
                             count++;
                         }
@@ -235,7 +247,7 @@ public class LifeSystem : SystemBase
             Dependency = JobHandle.CombineDependencies(Dependency, popHandle);
         }
         
-        //if (timePassed > 0.05f)
+        if (timePassed > 0f)
         {
             //Debug.Log("Generation: " + generation);
             generation++;
@@ -251,12 +263,13 @@ public class LifeSystem : SystemBase
                     int row = (i - (slice * size * size)) / (size);
                     int col = (i - (row * size)) - (slice * size * size);
                     int count = CountNeighbours(ref board, size, slice, row, col);
-                    if (Get(ref board, size, slice, row, col) > 0)
+                    int n = Get(ref board, size, slice, row, col);
+                    if (n > 0)
                     {
-                        if (count == 2 || count == 3)
+                        if (count == 4)
                         {
                             
-                            Set(ref next, size, slice, row, col, 255);
+                            Set(ref next, size, slice, row, col, n -1);
                             SetPosition(size, slice, row, col, center, ref p);
                         }
                         else
@@ -265,10 +278,11 @@ public class LifeSystem : SystemBase
                             p.Value = PositionOutOfBounds;
                         }
                     }
-                    else 
-                    {   if (count == 3)
+                    else
+                    {   
+                        if (count == 4)
                         {
-                            Set(ref next, size, slice, row, col, 255);
+                            Set(ref next, size, slice, row, col, 4);
                             SetPosition(size, slice, row, col, center, ref p);
                         }
                         else

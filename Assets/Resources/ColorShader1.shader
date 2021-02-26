@@ -36,6 +36,13 @@ Shader "Custom/ColorShader1"
             // put more per-instance properties here
         UNITY_INSTANCING_BUFFER_END(Props)
 
+        float map(float from, float start1, float stop1, float start2, float stop2) {
+            float range1 = stop1 - start1;
+            float range2 = stop2 - start2;
+            float howFar = from - start1;
+        return start2 + (howFar / range1) * range2;
+    }
+
         float3 hsv_to_rgb(float3 HSV)
 		{
 			float3 RGB = HSV.z;
@@ -58,8 +65,9 @@ Shader "Custom/ColorShader1"
         void surf (Input IN, inout SurfaceOutputStandard o)
         {
             // Albedo comes from a texture tinted by color
-            float dist = sqrt(pow(IN.worldPos.x,2) + pow(IN.worldPos.y, 2) + pow(IN.worldPos.z, 2));
-			float hue = abs(((dist / 20.0f) - _Time*5.0))  % 1.0;
+            float dist = IN.worldPos.x + IN.worldPos.y + IN.worldPos.z;
+
+			float hue = map(dist, -105, 105, 0, 1);
 			fixed3 c = hsv_to_rgb(float3(hue, 1, 1));
 			o.Albedo = c.rgb;
 			// Metallic and smoothness come from slider variables
