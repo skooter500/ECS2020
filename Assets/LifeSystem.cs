@@ -235,9 +235,9 @@ public class LifeSystem : SystemBase
             Dependency = JobHandle.CombineDependencies(Dependency, popHandle);
         }
         
-        if (timePassed > 0.05f)
+        //if (timePassed > 0.05f)
         {
-            Debug.Log("Generation: " + generation);
+            //Debug.Log("Generation: " + generation);
             generation++;
             timePassed = 0;
 
