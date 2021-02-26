@@ -78,20 +78,21 @@ namespace ew
 
         public void OnDestroy()
         {
-            DestroyEntities();
-        }
+            Debug.Log("OnDestroy BoidBootstrap");
 
-        public void DestroyEntities()
-        {
-            entityManager.DestroyEntity(allTheBoids);
-            entityManager.DestroyEntity(allTheheadsAndTails);
-            entityManager.DestroyEntity(allTheSpines);
+            if (World.DefaultGameObjectInjectionWorld != null && World.DefaultGameObjectInjectionWorld.IsCreated)
+            {
+                Debug.Log("Destroying the entities");
+                entityManager.DestroyEntity(allTheBoids);
+                entityManager.DestroyEntity(allTheheadsAndTails);
+                entityManager.DestroyEntity(allTheSpines);
+                BoidJobSystem.Instance.Enabled = false;
+                SpineSystem.Instance.Enabled = false;
+                HeadsAndTailsSystem.Instance.Enabled = false;
+            }    
             allTheBoids.Dispose();
             allTheheadsAndTails.Dispose();
             allTheSpines.Dispose();
-            BoidJobSystem.Instance.Enabled = false;
-            SpineSystem.Instance.Enabled = false;
-            HeadsAndTailsSystem.Instance.Enabled = false;            
         }
 
         Entity CreateSmallBoid(Vector3 pos, Quaternion q, int boidId, float size)
@@ -404,7 +405,7 @@ namespace ew
         // Start is called before the first frame update
         void Start()
         {
-            
+            BoidJobSystem.Instance.Enabled = true;
             allTheBoids = new NativeArray<Entity>(numBoids, Allocator.Persistent);
             allTheheadsAndTails = new NativeArray<Entity>(numBoids * 2, Allocator.Persistent);
             allTheSpines = new NativeArray<Entity>(numBoids * spineLength, Allocator.Persistent);
@@ -577,15 +578,6 @@ namespace ew
         void Awake()
         {
             //SceneManager.sceneUnloaded += DestroyTheBoids;
-        }
-
-        void DestroyTheBoids<Scene>(Scene scene)
-        {
-            if (!isContainer)
-            {
-                Debug.Log("Destroying the boids in " + SceneManager.GetActiveScene().name);
-                DestroyEntities();
-            }
         }
 
         void DoExplosion(int expType)

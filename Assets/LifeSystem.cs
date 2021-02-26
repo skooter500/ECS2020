@@ -18,9 +18,10 @@ struct Cell : IComponentData
 
 public class LifeSystem : SystemBase
 {
+    public Vector3 center;
     public static string[] rules;
     public string rule;
-    public int size = 100;
+    public int size = 70;
 
     private NativeArray<int> board;
     private NativeArray<int> next;
@@ -42,11 +43,11 @@ public class LifeSystem : SystemBase
     };
 
     internal static readonly float3 PositionOutOfBounds = new float3(-1000000, -1000000, -1000000);
+    public static LifeSystem Instance;
 
     private void Randomize()
     {
-        //for (int slice = 0; slice < size; slice++)
-        int slice = 0;
+        for (int slice = 0; slice < size; slice++)
         {
             for (int row = 0; row < size; row++)
             {
@@ -68,6 +69,8 @@ public class LifeSystem : SystemBase
 
     protected override void OnCreate()
     {
+        Debug.Log("On create");
+        Instance = this;
         board = new NativeArray<int>((int)Mathf.Pow(size, 3), Allocator.Persistent);
         next = new NativeArray<int>((int)Mathf.Pow(size, 3), Allocator.Persistent);
         entities = new NativeArray<Entity>((int)Mathf.Pow(size, 3), Allocator.Persistent);
@@ -75,21 +78,27 @@ public class LifeSystem : SystemBase
         entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
 
         CreateArchetype();
+
         Enabled = false;
     }
 
     protected override void OnStartRunning()
     {
-        CreateEntities();
-        InitialState();
+        Debug.Log("On start running");        
     }
 
-    protected override void OnStopRunning()
+    public void DestroyEntities()
     {
         entityManager.DestroyEntity(cellQuery);
     }
 
-    private void CreateEntities()
+    protected override void OnStopRunning()
+    {
+        Debug.Log("On stop running");
+        DestroyEntities();
+    }
+
+    public void CreateEntities()
     {
         entityManager.CreateEntity(cubeArchetype, entities);
 
@@ -107,8 +116,9 @@ public class LifeSystem : SystemBase
     {
         cubeArchetype = entityManager.CreateArchetype(
                     typeof(Translation),
+                    typeof(Rotation),
                     typeof(LocalToWorld),
-                    typeof(RenderBounds),
+                    typeof(RenderBounds),                    
                     typeof(Cell)
 
         );
@@ -123,7 +133,7 @@ public class LifeSystem : SystemBase
         };
     }
 
-    private void InitialState()
+    public void InitialState()
     {
         Randomize();
 
@@ -184,13 +194,22 @@ public class LifeSystem : SystemBase
         return count;
     }
 
-    protected override void OnUpdate()
+    public static void SetPosition(int size, int slice, int row, int col, Vector3 center, ref Translation p)
     {
+        int halfSize = size / 2;
+        p.Value.x = center.x + slice - (size / 2);
+        p.Value.y = center.y + row - (size / 2);
+        p.Value.z = center.z + col - (size / 2);
+    }
+
+    protected override void OnUpdate()
+    {                
         timePassed += Time.DeltaTime;
 
         NativeArray<int> board = this.board;
         NativeArray<int> next = this.next;
         int size = this.size;        
+        Vector3 center = this.center;
         if (!populated)
         {
             Debug.Log("populating!");
@@ -205,7 +224,7 @@ public class LifeSystem : SystemBase
                 c.cellId = entityInQueryIndex;
                 if (board[entityInQueryIndex] > 0)
                 {
-                    p.Value = new float3(slice, row, col);
+                    SetPosition(size, slice, row, col, center, ref p);
                 }
                 else
                 {
@@ -215,8 +234,8 @@ public class LifeSystem : SystemBase
             .ScheduleParallel(Dependency);
             Dependency = JobHandle.CombineDependencies(Dependency, popHandle);
         }
-        /*
-        if (timePassed > 0.2f)
+        
+        if (timePassed > 0.05f)
         {
             Debug.Log("Generation: " + generation);
             generation++;
@@ -238,7 +257,7 @@ public class LifeSystem : SystemBase
                         {
                             
                             Set(ref next, size, slice, row, col, 255);
-                            p.Value = new float3(slice, row, col);
+                            SetPosition(size, slice, row, col, center, ref p);
                         }
                         else
                         {
@@ -250,7 +269,7 @@ public class LifeSystem : SystemBase
                     {   if (count == 3)
                         {
                             Set(ref next, size, slice, row, col, 255);
-                            p.Value = new float3(slice, row, col);
+                            SetPosition(size, slice, row, col, center, ref p);
                         }
                         else
                         {
@@ -270,9 +289,7 @@ public class LifeSystem : SystemBase
 
             var cnHandle = cnJob.Schedule(size * size * size, 1, Dependency);
             Dependency = JobHandle.CombineDependencies(Dependency, cnHandle);                        
-        }
-        */
-        
+        }        
     }
 
     [BurstCompile]
