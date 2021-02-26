@@ -20,7 +20,7 @@ public class LifeSystem : SystemBase
 {
     public static string[] rules;
     public string rule;
-    public int size = 20;
+    public int size = 100;
 
     private NativeArray<int> board;
     private NativeArray<int> next;
@@ -45,7 +45,8 @@ public class LifeSystem : SystemBase
 
     private void Randomize()
     {
-        for (int slice = 0; slice < size; slice++)
+        //for (int slice = 0; slice < size; slice++)
+        int slice = 0;
         {
             for (int row = 0; row < size; row++)
             {
@@ -71,16 +72,21 @@ public class LifeSystem : SystemBase
         next = new NativeArray<int>((int)Mathf.Pow(size, 3), Allocator.Persistent);
         entities = new NativeArray<Entity>((int)Mathf.Pow(size, 3), Allocator.Persistent);
 
-        //Enabled = false;
-
         entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
 
         CreateArchetype();
+        Enabled = false;
+    }
 
+    protected override void OnStartRunning()
+    {
         CreateEntities();
-
-
         InitialState();
+    }
+
+    protected override void OnStopRunning()
+    {
+        entityManager.DestroyEntity(cellQuery);
     }
 
     private void CreateEntities()
@@ -121,14 +127,6 @@ public class LifeSystem : SystemBase
     {
         Randomize();
 
-        for(int i = 0 ; i < size ; i ++)
-        {
-            Set(ref board, size, size / 2, size / 2, i, 255);
-
-            //Set(ref board, size, 0, size / 2, i, 255);
-        }
-        
-
     }
 
     protected override void OnDestroy()
@@ -166,7 +164,8 @@ public class LifeSystem : SystemBase
     {
         int count = 0;
 
-        for (int s = slice - 1; s <= slice + 1; s++)
+        //for (int s = slice - 1; s <= slice + 1; s++)
+        int s = slice;
         {
             for (int r = row - 1; r <= row + 1; r++)
             {
@@ -196,7 +195,9 @@ public class LifeSystem : SystemBase
         {
             Debug.Log("populating!");
             populated = true;
-            JobHandle popHandle = Entities.ForEach((int entityInQueryIndex, ref Cell c, ref Translation p) =>
+            JobHandle popHandle = Entities
+                .WithBurst()
+                .ForEach((int entityInQueryIndex, ref Cell c, ref Translation p) =>
             {
                 int slice = (entityInQueryIndex / (size * size));
                 int row = (entityInQueryIndex - (slice * size * size)) / (size);
@@ -214,8 +215,8 @@ public class LifeSystem : SystemBase
             .ScheduleParallel(Dependency);
             Dependency = JobHandle.CombineDependencies(Dependency, popHandle);
         }
-        
-        if (timePassed > 2.0f)
+        /*
+        if (timePassed > 0.2f)
         {
             Debug.Log("Generation: " + generation);
             generation++;
@@ -223,6 +224,7 @@ public class LifeSystem : SystemBase
 
             var lifeHandle = Entities
                 .WithNativeDisableParallelForRestriction(board)
+                .WithBurst()
                 .ForEach((int entityInQueryIndex, ref Cell c, ref Translation p) =>
                 {
                     int i = entityInQueryIndex;
@@ -232,9 +234,9 @@ public class LifeSystem : SystemBase
                     int count = CountNeighbours(ref board, size, slice, row, col);
                     if (Get(ref board, size, slice, row, col) > 0)
                     {
-                        if (count == 4 || count == 5)
+                        if (count == 2 || count == 3)
                         {
-
+                            
                             Set(ref next, size, slice, row, col, 255);
                             p.Value = new float3(slice, row, col);
                         }
@@ -245,7 +247,7 @@ public class LifeSystem : SystemBase
                         }
                     }
                     else 
-                    {   if (count == 5)
+                    {   if (count == 3)
                         {
                             Set(ref next, size, slice, row, col, 255);
                             p.Value = new float3(slice, row, col);
@@ -267,9 +269,10 @@ public class LifeSystem : SystemBase
             };
 
             var cnHandle = cnJob.Schedule(size * size * size, 1, Dependency);
-            Dependency = JobHandle.CombineDependencies(Dependency, cnHandle); 
-            
+            Dependency = JobHandle.CombineDependencies(Dependency, cnHandle);                        
         }
+        */
+        
     }
 
     [BurstCompile]

@@ -179,7 +179,7 @@ namespace ew
                 }
             });
 
-
+            Enabled = false;
         }
 
         protected override void OnDestroy()
