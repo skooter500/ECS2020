@@ -16,12 +16,12 @@ struct Cell : IComponentData
     public int cellId;
 }
 
-public class LifeSystem : SystemBase
+public class TwoDLifeSystem : SystemBase
 {
     public Vector3 center;
     public static string[] rules;
     public string rule;
-    public int size = 70;
+    public int size = 400;
 
     private NativeArray<int> board;
     private NativeArray<int> next;
@@ -36,6 +36,8 @@ public class LifeSystem : SystemBase
 
     EntityQuery cellQuery;
 
+    public float delay = 0.1f;
+
     internal static readonly AABB OutOfBounds = new AABB
     {
         Center = new float3(-1000000, -1000000, -1000000),
@@ -43,13 +45,12 @@ public class LifeSystem : SystemBase
     };
 
     internal static readonly float3 PositionOutOfBounds = new float3(-1000000, -1000000, -1000000);
-    public static LifeSystem Instance;
+    public static TwoDLifeSystem Instance;
 
     private void Randomize()
     {
         int halfSize = size / 2;
         int centerBit = (int)(4);
-        for (int slice = halfSize - centerBit; slice <= halfSize + centerBit; slice++)
         {
             for (int row = halfSize - centerBit; row <= halfSize + centerBit; row++)
             {
@@ -58,7 +59,7 @@ public class LifeSystem : SystemBase
                     float dice = UnityEngine.Random.Range(0.0f, 1.0f);
                     //if (dice > 0.5f)
                     {
-                        Set(ref board, size, slice, row, col, 4);
+                        Set(ref board, size, row, col, 4);
                     }
                     /*
                     else
@@ -74,9 +75,9 @@ public class LifeSystem : SystemBase
     {
         Debug.Log("On create");
         Instance = this;
-        board = new NativeArray<int>((int)Mathf.Pow(size, 3), Allocator.Persistent);
-        next = new NativeArray<int>((int)Mathf.Pow(size, 3), Allocator.Persistent);
-        entities = new NativeArray<Entity>((int)Mathf.Pow(size, 3), Allocator.Persistent);
+        board = new NativeArray<int>((int)Mathf.Pow(size, 2), Allocator.Persistent);
+        next = new NativeArray<int>((int)Mathf.Pow(size, 2), Allocator.Persistent);
+        entities = new NativeArray<Entity>((int)Mathf.Pow(size, 2), Allocator.Persistent);
 
         entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
 
@@ -87,7 +88,7 @@ public class LifeSystem : SystemBase
 
     protected override void OnStartRunning()
     {
-        Debug.Log("On start running");        
+        Debug.Log("On start running");
     }
 
     public void DestroyEntities()
@@ -106,11 +107,11 @@ public class LifeSystem : SystemBase
         entityManager.CreateEntity(cubeArchetype, entities);
 
         cellQuery = GetEntityQuery(new EntityQueryDesc()
-            {
-                All = new ComponentType[] {
+        {
+            All = new ComponentType[] {
                     ComponentType.ReadOnly<Cell>()
-                }                
-            });
+                }
+        });
 
         entityManager.AddSharedComponentData(cellQuery, cubeMesh);
     }
@@ -120,8 +121,9 @@ public class LifeSystem : SystemBase
         cubeArchetype = entityManager.CreateArchetype(
                     typeof(Translation),
                     typeof(Rotation),
+                    typeof(NonUniformScale),
                     typeof(LocalToWorld),
-                    typeof(RenderBounds),                    
+                    typeof(RenderBounds),
                     typeof(Cell)
 
         );
@@ -136,18 +138,24 @@ public class LifeSystem : SystemBase
         };
     }
 
-    public void InitialState()
+    public void Clear()
+    {
+        for (int i = 0; i < size * size; i++)
+        {
+            board[i] = 0;
+        }        
+    }
+
+    public void Cross()
     {
         //Randomize();
-        for(int i = 0 ; i < size ; i ++)
+        for (int i = 0; i < size; i++)
         {
-            Set(ref board, size, size / 2, size / 2, i, 4);
-            Set(ref board, size, i, size / 2, size / 2, 4);
-            Set(ref board, size, size / 2, i, size / 2, 4);
-
-            Set(ref board, size, size / 2 + 1, size / 2, i, 4);
-            Set(ref board, size, i, size / 2, size / 2 + 1, 4);
-            Set(ref board, size, size / 2, i, size / 2 + 1, 4);
+            Set(ref board, size, size / 2, i, 4);
+            Set(ref board, size, i, size / 2, 4);
+            
+            Set(ref board, size, size / 2 + 1, i, 4);
+            Set(ref board, size, i, size / 2 + 1, 4);            
         }
 
     }
@@ -163,64 +171,62 @@ public class LifeSystem : SystemBase
     int generation = 0;
     bool populated = false;
 
-    public static int ToCell(int size, int slice, int row, int col)
+    public static int ToCell(int size, int row, int col)
     {
-        return (slice * size * size) + (row * size) + col;
+        return (row * size) + col;
     }
 
-    public static int Get(ref NativeArray<int> board, int size, int slice, int row, int col)
+    public static int Get(ref NativeArray<int> board, int size, int row, int col)
     {
-        if (row < 0 || row >= size || col < 0 || col >= size || slice < 0 || slice >= size)
+        if (row < 0 || row >= size || col < 0 || col >= size)
         {
             return 0;
         }
-        return (board[ToCell(size, slice, row, col)]);
+        return (board[ToCell(size, row, col)]);
     }
 
-    public static void Set(ref NativeArray<int> board, int size, int slice, int row, int col, int val)
+    public static void Set(ref NativeArray<int> board, int size, int row, int col, int val)
     {
-        int cell = ToCell(size, slice, row, col);
+        int cell = ToCell(size, row, col);
         board[cell] = val;
     }
 
-    private static int CountNeighbours(ref NativeArray<int> board, int size, int slice, int row, int col)
+    private static int CountNeighbours(ref NativeArray<int> board, int size, int row, int col)
     {
         int count = 0;
 
-        for (int s = slice - 1; s <= slice + 1; s++)        
+        for (int r = row - 1; r <= row + 1; r++)
         {
-            for (int r = row - 1; r <= row + 1; r++)
+            for (int c = col - 1; c <= col + 1; c++)
             {
-                for (int c = col - 1; c <= col + 1; c++)
+                if (!(r == row && c == col))
                 {
-                    if (!(r == row && c == col && s == slice))
+                    if (Get(ref board, size, r, c) == 4)
                     {
-                        if (Get(ref board, size, s, r, c) == 4)
-                        {
-                            count++;
-                        }
+                        count++;
                     }
                 }
             }
         }
+
         return count;
     }
 
-    public static void SetPosition(int size, int slice, int row, int col, Vector3 center, ref Translation p)
+    public static void SetPosition(int size, int row, int col, Vector3 center, ref Translation p)
     {
         int halfSize = size / 2;
-        p.Value.x = center.x + slice - (size / 2);
+        p.Value.z = center.x - (size / 2);
         p.Value.y = center.y + row - (size / 2);
-        p.Value.z = center.z + col - (size / 2);
+        p.Value.x = center.z + col - (size / 2);
     }
 
     protected override void OnUpdate()
-    {                
+    {
         timePassed += Time.DeltaTime;
 
         NativeArray<int> board = this.board;
         NativeArray<int> next = this.next;
-        int size = this.size;        
+        int size = this.size;
         Vector3 center = this.center;
         if (!populated)
         {
@@ -228,15 +234,15 @@ public class LifeSystem : SystemBase
             populated = true;
             JobHandle popHandle = Entities
                 .WithBurst()
-                .ForEach((int entityInQueryIndex, ref Cell c, ref Translation p) =>
+                .ForEach((int entityInQueryIndex, ref Cell c, ref Translation p, ref NonUniformScale s) =>
             {
-                int slice = (entityInQueryIndex / (size * size));
-                int row = (entityInQueryIndex - (slice * size * size)) / (size);
-                int col = (entityInQueryIndex - (row * size)) - (slice * size * size);
+                int row = entityInQueryIndex / (size);
+                int col = entityInQueryIndex - (row * size);
                 c.cellId = entityInQueryIndex;
+                s.Value = new float3(1,1, 3);
                 if (board[entityInQueryIndex] > 0)
                 {
-                    SetPosition(size, slice, row, col, center, ref p);
+                    SetPosition(size, row, col, center, ref p);
                 }
                 else
                 {
@@ -246,8 +252,8 @@ public class LifeSystem : SystemBase
             .ScheduleParallel(Dependency);
             Dependency = JobHandle.CombineDependencies(Dependency, popHandle);
         }
-        
-        if (timePassed > 0f)
+
+        if (timePassed > delay)
         {
             //Debug.Log("Generation: " + generation);
             generation++;
@@ -258,42 +264,40 @@ public class LifeSystem : SystemBase
                 .WithBurst()
                 .ForEach((int entityInQueryIndex, ref Cell c, ref Translation p) =>
                 {
-                    int i = entityInQueryIndex;
-                    int slice = (i / (size * size));
-                    int row = (i - (slice * size * size)) / (size);
-                    int col = (i - (row * size)) - (slice * size * size);
-                    int count = CountNeighbours(ref board, size, slice, row, col);
-                    int n = Get(ref board, size, slice, row, col);
+                    int row = entityInQueryIndex / (size);
+                    int col = entityInQueryIndex - (row * size);
+                    int count = CountNeighbours(ref board, size, row, col);
+                    int n = Get(ref board, size, row, col);
                     if (n > 0)
                     {
-                        if (count == 4)
+                        if (count == 2 || count == 3)
                         {
-                            
-                            Set(ref next, size, slice, row, col, n -1);
-                            SetPosition(size, slice, row, col, center, ref p);
+
+                            Set(ref next, size, row, col, n);
+                            SetPosition(size, row, col, center, ref p);
                         }
                         else
                         {
-                            Set(ref next, size, slice, row, col, 0);
+                            Set(ref next, size, row, col, 0);
                             p.Value = PositionOutOfBounds;
                         }
                     }
                     else
-                    {   
-                        if (count == 4)
+                    {
+                        if (count == 3)
                         {
-                            Set(ref next, size, slice, row, col, 4);
-                            SetPosition(size, slice, row, col, center, ref p);
+                            Set(ref next, size, row, col, 4);
+                            SetPosition(size, row, col, center, ref p);
                         }
                         else
                         {
-                            Set(ref next, size, slice, row, col, 0);
+                            Set(ref next, size, row, col, 0);
                             p.Value = PositionOutOfBounds;
                         }
                     }
                 })
-                .ScheduleParallel(Dependency);        
-            Dependency = JobHandle.CombineDependencies(Dependency, lifeHandle);        
+                .ScheduleParallel(Dependency);
+            Dependency = JobHandle.CombineDependencies(Dependency, lifeHandle);
 
             var cnJob = new CopyNextToBoard()
             {
@@ -301,9 +305,9 @@ public class LifeSystem : SystemBase
                 board = this.board
             };
 
-            var cnHandle = cnJob.Schedule(size * size * size, 1, Dependency);
-            Dependency = JobHandle.CombineDependencies(Dependency, cnHandle);                        
-        }        
+            var cnHandle = cnJob.Schedule(size * size, 1, Dependency);
+            Dependency = JobHandle.CombineDependencies(Dependency, cnHandle);
+        }
     }
 
     [BurstCompile]

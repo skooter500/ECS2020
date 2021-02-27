@@ -41,7 +41,7 @@ public class FPSController : MonoBehaviour
         float theshold = 0.95f;
         if ((angle > 0 && invcosTheta1 < -theshold) || (angle < 0 && invcosTheta1 > theshold))
         {
-            return;
+            //return;
         }
         // A pitch is a rotation around the right vector
         Quaternion rot = Quaternion.AngleAxis(angle, transform.right);
