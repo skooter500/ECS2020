@@ -47,7 +47,7 @@ public class TwoDLifeSystem : SystemBase
     internal static readonly float3 PositionOutOfBounds = new float3(-1000000, -1000000, -1000000);
     public static TwoDLifeSystem Instance;
 
-    private void Randomize()
+    public void Randomize()
     {
         int halfSize = size / 2;
         int centerBit = (int)(4);

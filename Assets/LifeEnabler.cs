@@ -32,6 +32,13 @@ public class LifeEnabler : MonoBehaviour
         {
             TwoDLifeSystem.Instance.Cross();
         }
+
+        if (Input.GetKeyDown(KeyCode.Alpha2))
+        {
+            TwoDLifeSystem.Instance.Randomize();
+        }
+        
+
         if (Input.GetKeyDown(KeyCode.Space))
         {
             TwoDLifeSystem.Instance.Clear();
@@ -49,6 +56,7 @@ public class LifeEnabler : MonoBehaviour
             }
         }
 
+        
         if (Input.GetKeyDown(KeyCode.P))
         {
             TwoDLifeSystem.Instance.delay+= Time.deltaTime * 5;
