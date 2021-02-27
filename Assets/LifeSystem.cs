@@ -50,22 +50,22 @@ public class TwoDLifeSystem : SystemBase
     public void Randomize()
     {
         int halfSize = size / 2;
-        int centerBit = (int)(4);
+        int centerBit = halfSize;
         {
             for (int row = halfSize - centerBit; row <= halfSize + centerBit; row++)
             {
                 for (int col = halfSize - centerBit; col <= halfSize + centerBit; col++)
                 {
                     float dice = UnityEngine.Random.Range(0.0f, 1.0f);
-                    //if (dice > 0.5f)
+                    if (dice > 0.5f)
                     {
                         Set(ref board, size, row, col, 4);
                     }
-                    /*
+                    
                     else
                     {
-                        Set(ref board, size, slice, row, col, 0);
-                    }*/
+                        Set(ref board, size, row, col, 0);
+                    }
                 }
             }
         }
