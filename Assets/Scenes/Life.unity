@@ -580,17 +580,17 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 942453219}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: cfa664786cefa1540a06f6d6e807e1e5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   speed: 10
-  maxDist: 600
-  range: 300
+  maxDist: 500
+  range: 500
   target: 0
   targetPos: {x: 0, y: 0, z: 0}
-  timeToNext: 10
+  timeToNext: 4
   targetQuaternion: {x: 0, y: 0, z: 0, w: 1}
 --- !u!114 &942453225
 MonoBehaviour:
