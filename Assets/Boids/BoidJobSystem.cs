@@ -116,6 +116,9 @@ namespace ew
         EntityQuery alignmentQuery;
         EntityQuery constrainQuery;
 
+        public Vector3 CamPosition;
+        public Quaternion CamRotation;
+
         protected override void OnCreate()
         {
             Instance = this;
@@ -226,6 +229,9 @@ namespace ew
             float deltaTime = Time.DeltaTime * bootstrap.speed;
 
             Unity.Mathematics.Random random = new Unity.Mathematics.Random((uint)UnityEngine.Random.Range(1, 100000));
+
+            CamPosition = positions[0];
+            CamRotation = rotations[0];
 
             // Copy entities to the native arrays             
             var copyToNativeJob = new CopyTransformsToNativeJob()
@@ -376,7 +382,7 @@ namespace ew
 
             var copyFromNativeHandle = copyFromNativeJob.ScheduleParallel(translationsRotationsQuery, 1, Dependency);
 
-            Dependency = JobHandle.CombineDependencies(Dependency, copyFromNativeHandle);
+            Dependency = JobHandle.CombineDependencies(Dependency, copyFromNativeHandle);            
 
             return;
         }
