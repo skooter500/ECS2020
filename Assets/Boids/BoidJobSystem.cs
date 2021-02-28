@@ -115,6 +115,7 @@ namespace ew
         EntityQuery cohesionQuery;
         EntityQuery alignmentQuery;
         EntityQuery constrainQuery;
+        EntityQuery obstacleQuery;
 
         public Vector3 CamPosition;
         public Quaternion CamRotation;
@@ -201,6 +202,16 @@ namespace ew
                 }
             });
 
+            obstacleQuery = GetEntityQuery(new EntityQueryDesc()
+            {
+                All = new ComponentType[] {
+                    ComponentType.ReadOnly<ObstacleAvoidance>(),
+                    ComponentType.ReadOnly<Boid>(),
+                    ComponentType.ReadOnly<Translation>(),
+                    ComponentType.ReadOnly<LocalToWorld>()
+                }
+            });
+
             Enabled = false;
         }
 
@@ -225,7 +236,9 @@ namespace ew
             ComponentTypeHandle<Cohesion> cTHandle = GetComponentTypeHandle<Cohesion>();
             ComponentTypeHandle<Alignment> aTHandle = GetComponentTypeHandle<Alignment>();
             ComponentTypeHandle<Constrain> conTHandle = GetComponentTypeHandle<Constrain>();
-
+            ComponentTypeHandle<LocalToWorld> ltwTHandle = GetComponentTypeHandle<LocalToWorld>();
+            ComponentTypeHandle<ObstacleAvoidance> oaTHandle = GetComponentTypeHandle<ObstacleAvoidance>();
+            
             float deltaTime = Time.DeltaTime * bootstrap.speed;
 
             Unity.Mathematics.Random random = new Unity.Mathematics.Random((uint)UnityEngine.Random.Range(1, 100000));
@@ -245,6 +258,17 @@ namespace ew
 
             var copyToNativeHandle = copyToNativeJob.ScheduleParallel(translationsRotationsQuery, 1, Dependency);
             Dependency = JobHandle.CombineDependencies(Dependency, copyToNativeHandle);
+
+            var oaJob = new ObstacleAvoidanceJob()
+            {
+                boidTypeHandle = bTHandle,
+                translationTypeHandle = ttTHandle,
+                ltwTypeHandle = ltwTHandle,
+                obstacleAvoidanceTypeHandle = oaTHandle
+            };
+
+            var oaJobHandle = oaJob.ScheduleParallel(obstacleQuery, 1, Dependency);
+            Dependency = JobHandle.CombineDependencies(Dependency, oaJobHandle);
 
             if (bootstrap.usePartitioning)
             {
@@ -365,7 +389,8 @@ namespace ew
                 rotationTypeHandle = rTHandle,
                 cohesionTypeHandle = cTHandle,
                 alignmentTypeHandle = aTHandle,
-                constrainTypeHandle = conTHandle
+                constrainTypeHandle = conTHandle,
+                obstacleTypeHandle = oaTHandle
             };
 
             var boidJobHandle = boidJob.ScheduleParallel(boidQuery, 1, Dependency);
@@ -512,12 +537,21 @@ namespace ew
         [ReadOnly] public ComponentTypeHandle<Constrain> constrainTypeHandle;
         [ReadOnly] public ComponentTypeHandle<Translation> translationTypeHandle;
         [ReadOnly] public ComponentTypeHandle<Rotation> rotationTypeHandle;
+        [ReadOnly] public ComponentTypeHandle<ObstacleAvoidance> obstacleTypeHandle;
         public ComponentTypeHandle<Boid> boidTypeHandle;
 
 
-        private Vector3 AccululateForces(ref Boid b, ref Seperation s, ref Alignment a, ref Cohesion c, ref Wander w, ref Constrain con)
+        private Vector3 AccululateForces(ref Boid b, ref ObstacleAvoidance oa, ref Seperation s, ref Alignment a, ref Cohesion c, ref Wander w, ref Constrain con)
         {
             Vector3 force = Vector3.zero;
+
+
+            force += oa.force;
+            if (force.magnitude >= b.maxForce)
+            {
+                force = Vector3.ClampMagnitude(force, b.maxForce);
+                return force;
+            }
 
             force += b.fleeForce;
             if (force.magnitude >= b.maxForce)
@@ -581,6 +615,7 @@ namespace ew
             var cohesionChunk = batchInChunk.GetNativeArray(cohesionTypeHandle);
             var alignmentChunk = batchInChunk.GetNativeArray(alignmentTypeHandle);
             var constrainChunk = batchInChunk.GetNativeArray(constrainTypeHandle);
+            var oaChunk = batchInChunk.GetNativeArray(obstacleTypeHandle);
 
             for (int i = 0; i < batchInChunk.Count; i++)
             {
@@ -593,8 +628,9 @@ namespace ew
                 Cohesion c = cohesionChunk[i];
                 Alignment a = alignmentChunk[i];
                 Constrain con = constrainChunk[i];
+                ObstacleAvoidance oa = oaChunk[i];
 
-                b.force = AccululateForces(ref b, ref s, ref a, ref c, ref w, ref con) * b.weight;
+                b.force = AccululateForces(ref b, ref oa, ref s, ref a, ref c, ref w, ref con) * b.weight;
 
                 b.force = Vector3.ClampMagnitude(b.force, b.maxForce);
                 Vector3 newAcceleration = (b.force * b.weight) * (1.0f / b.mass);

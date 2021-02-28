@@ -132,6 +132,9 @@ namespace ew
             });
             entityManager.SetComponentData(boidEntity, new Spine() { parent = -1, spineId = boidId });
 
+            entityManager.SetComponentData(boidEntity, new ObstacleAvoidance() {forwardFeelerDepth = 50, forceType = ObstacleAvoidance.ForceType.normal });
+            
+
             entityManager.AddSharedComponentData(boidEntity, bodyMesh);
 
             // Make the head
@@ -430,6 +433,7 @@ namespace ew
                 typeof(Constrain),
                 typeof(Flee),
                 typeof(Seek),
+                typeof(ObstacleAvoidance),
                 typeof(Spine)
 
             );
