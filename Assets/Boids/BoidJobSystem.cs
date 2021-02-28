@@ -4,6 +4,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
+using Unity.Physics;
 using Unity.Transforms;
 using UnityEngine;
 
@@ -25,6 +26,24 @@ namespace ew
 
         public Vector3 fleeForce; // Have to put this here because there is a limit to the number of components in IJobProcessComponentData
         public Vector3 seekForce; // Have to put this here because there is a limit to the number of components in IJobProcessComponentData
+    }
+
+    public struct ObstacleAvoidance:IComponentData
+    {
+        public float forwardFeelerDepth;
+        public Vector3 feeler;
+
+        public enum ForceType
+        {
+            normal,
+            incident,
+            up,
+            braking
+        };
+
+        public ForceType forceType;
+
+        public Vector3 force;
     }
 
     public struct Flee : IComponentData
@@ -898,6 +917,51 @@ namespace ew
                 */
                 con.force = force * weight;
                 constrainChunk[i] = con;
+            }
+        }
+    }
+
+    [BurstCompile]
+    struct ObstacleAvoidanceJob:IJobEntityBatch
+    {
+        [ReadOnly] public ComponentTypeHandle<Boid> boidTypeHandle;
+        [ReadOnly] public ComponentTypeHandle<Translation> translationTypeHandle;
+        [ReadOnly] public ComponentTypeHandle<LocalToWorld> ltwTypeHandle;
+        public ComponentTypeHandle<ObstacleAvoidance> obstacleAvoidanceTypeHandle;
+        public CollisionWorld collisionWorld;
+
+        public void Execute(ArchetypeChunk batchInChunk, int batchIndex)
+        {
+
+            var boidChunk = batchInChunk.GetNativeArray(boidTypeHandle);
+            var translationsChunk = batchInChunk.GetNativeArray(translationTypeHandle);
+            var ltwChunk = batchInChunk.GetNativeArray(ltwTypeHandle);
+            var obstacleAvoidanceChunk = batchInChunk.GetNativeArray(obstacleAvoidanceTypeHandle);
+
+            for (int i = 0; i < batchInChunk.Count; i++)
+            {
+                float3 force = Vector3.zero;
+                Translation p = translationsChunk[i];
+                ObstacleAvoidance oa = obstacleAvoidanceChunk[i];                
+                Boid b = boidChunk[i];
+
+                var input = new RaycastInput() {
+                    Start = p.Value,
+                    End = p.Value + ltwChunk[i].Forward * obstacleAvoidanceChunk[i].forwardFeelerDepth,
+                                        
+                    Filter = new CollisionFilter {
+                        BelongsTo = ~0u,
+                        CollidesWith = ~0u, // all 1s, so all layers, collide with everything
+                        GroupIndex = 0
+                    }
+                };
+                                    
+                if (collisionWorld.CastRay(input, out var hit))
+                {
+                    float dist = math.distance(hit.Position, p.Value);
+                    force += hit.SurfaceNormal * (obstacleAvoidanceChunk[i].forwardFeelerDepth / dist);
+                }
+                oa.force = force;
             }
         }
     }
