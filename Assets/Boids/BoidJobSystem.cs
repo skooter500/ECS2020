@@ -5,6 +5,7 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Physics;
+using Unity.Physics.Systems;
 using Unity.Transforms;
 using UnityEngine;
 
@@ -120,6 +121,9 @@ namespace ew
         public Vector3 CamPosition;
         public Quaternion CamRotation;
 
+        BuildPhysicsWorld physicsWorld;
+        CollisionWorld collisionWorld;
+
         protected override void OnCreate()
         {
             Instance = this;
@@ -213,6 +217,9 @@ namespace ew
             });
 
             Enabled = false;
+
+            //physicsWorld  = World.GetExistingSystem<Unity.Physics.Systems.BuildPhysicsWorld>();
+            //collisionWorld = physicsWorld;
         }
 
         protected override void OnDestroy()
@@ -259,6 +266,7 @@ namespace ew
             var copyToNativeHandle = copyToNativeJob.ScheduleParallel(translationsRotationsQuery, 1, Dependency);
             Dependency = JobHandle.CombineDependencies(Dependency, copyToNativeHandle);
 
+            /*
             var oaJob = new ObstacleAvoidanceJob()
             {
                 boidTypeHandle = bTHandle,
@@ -269,7 +277,8 @@ namespace ew
 
             var oaJobHandle = oaJob.ScheduleParallel(obstacleQuery, 1, Dependency);
             Dependency = JobHandle.CombineDependencies(Dependency, oaJobHandle);
-
+            */
+            
             if (bootstrap.usePartitioning)
             {
                 cells.Clear();
