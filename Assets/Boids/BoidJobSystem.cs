@@ -218,8 +218,8 @@ namespace ew
 
             Enabled = false;
 
-            //physicsWorld  = World.GetExistingSystem<Unity.Physics.Systems.BuildPhysicsWorld>();
-            //collisionWorld = physicsWorld;
+            physicsWorld  = World.GetExistingSystem<Unity.Physics.Systems.BuildPhysicsWorld>();
+            collisionWorld = physicsWorld.PhysicsWorld.CollisionWorld;
         }
 
         protected override void OnDestroy()
@@ -266,18 +266,19 @@ namespace ew
             var copyToNativeHandle = copyToNativeJob.ScheduleParallel(translationsRotationsQuery, 1, Dependency);
             Dependency = JobHandle.CombineDependencies(Dependency, copyToNativeHandle);
 
-            /*
+            
             var oaJob = new ObstacleAvoidanceJob()
             {
                 boidTypeHandle = bTHandle,
                 translationTypeHandle = ttTHandle,
                 ltwTypeHandle = ltwTHandle,
-                obstacleAvoidanceTypeHandle = oaTHandle
+                obstacleAvoidanceTypeHandle = oaTHandle,
+                collisionWorld = physicsWorld.PhysicsWorld.CollisionWorld
+
             };
 
             var oaJobHandle = oaJob.ScheduleParallel(obstacleQuery, 1, Dependency);
             Dependency = JobHandle.CombineDependencies(Dependency, oaJobHandle);
-            */
             
             if (bootstrap.usePartitioning)
             {
