@@ -397,7 +397,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   prefab: {fileID: 1949189983}
   count: 5
-  radius: 1000
+  radius: 100
 --- !u!4 &1039984737
 Transform:
   m_ObjectHideFlags: 0

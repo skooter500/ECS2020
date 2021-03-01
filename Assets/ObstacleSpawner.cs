@@ -27,7 +27,7 @@ public class ObstacleSpawner : MonoBehaviour
 
             var position = transform.TransformPoint(UnityEngine.Random.insideUnitSphere * radius);
             entityManager.AddComponentData(instance, new Translation {Value = position});   
-            entityManager.AddComponentData(instance, new Scale {Value = UnityEngine.Random.Range(100, 200)});
+            entityManager.AddComponentData(instance, new Scale {Value = UnityEngine.Random.Range(10, 20)});
         }
 
     }
