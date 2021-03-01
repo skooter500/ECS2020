@@ -324,6 +324,7 @@ namespace ew
                 target = UnityEngine.Random.insideUnitSphere * 1.2f
             });                        
             entityManager.SetComponentData(boidEntity, new Spine() { parent = -1, spineId = (spineLength + 1) * boidId });
+            entityManager.SetComponentData(boidEntity, new ObstacleAvoidance() {forwardFeelerDepth = 50, forceType = ObstacleAvoidance.ForceType.normal});
 
             entityManager.AddSharedComponentData(boidEntity, bodyMesh);
 

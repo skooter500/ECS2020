@@ -396,8 +396,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   prefab: {fileID: 1949189983}
-  count: 5
-  radius: 100
+  count: 20
+  radius: 1000
 --- !u!4 &1039984737
 Transform:
   m_ObjectHideFlags: 0
@@ -639,7 +639,7 @@ MonoBehaviour:
   maxBoidsPerFrame: 500
   seekWeight: 0
   constrainTranslation: {x: 0, y: 0, z: 0}
-  numBoids: 1
+  numBoids: 1000
   radius: 1000
   neighbourDistance: 150
   speed: 2
@@ -677,7 +677,6 @@ GameObject:
   - component: {fileID: 1949189988}
   - component: {fileID: 1949189987}
   - component: {fileID: 1949189986}
-  - component: {fileID: 1949189985}
   - component: {fileID: 1949189984}
   m_Layer: 0
   m_Name: Sphere
@@ -687,19 +686,6 @@ GameObject:
   m_StaticEditorFlags: 0
   m_IsActive: 1
 --- !u!135 &1949189984
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1949189983}
-  m_Material: {fileID: 0}
-  m_IsTrigger: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.5
-  m_Center: {x: 0, y: 0, z: 0}
---- !u!135 &1949189985
 SphereCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

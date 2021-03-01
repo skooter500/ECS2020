@@ -23,11 +23,11 @@ public class ObstacleSpawner : MonoBehaviour
 
         for(int i = 0 ; i < count ; i ++)
         {
-            var instance = entityManager.Instantiate(prefab);
+            var instance = entityManager.Instantiate(entityPrefab);
 
             var position = transform.TransformPoint(UnityEngine.Random.insideUnitSphere * radius);
             entityManager.AddComponentData(instance, new Translation {Value = position});   
-            entityManager.AddComponentData(instance, new Scale {Value = UnityEngine.Random.Range(10, 20)});
+            entityManager.AddComponentData(instance, new Scale {Value = UnityEngine.Random.Range(300, 500)});
         }
 
     }

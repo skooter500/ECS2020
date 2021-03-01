@@ -220,7 +220,24 @@ namespace ew
 
             physicsWorld  = World.GetExistingSystem<Unity.Physics.Systems.BuildPhysicsWorld>();
             collisionWorld = physicsWorld.PhysicsWorld.CollisionWorld;
+
+            // Register the gizmos callback
+            //MyGizmo.OnDrawGizmos(DrawGizmos);
+
         }
+
+        private void DrawGizmos()
+        {
+            Entities.ForEach((Boid boid, ObstacleAvoidance oa, Translation p, Rotation r) =>
+            {
+                Vector3 position = p.Value;
+                Vector3 forward = math.mul(r.Value, Vector3.forward);
+                Debug.DrawLine(p.Value, (forward *oa.forwardFeelerDepth) + position, Color.cyan);
+            })
+            .Run();
+        }
+
+
 
         protected override void OnDestroy()
         {
@@ -252,6 +269,8 @@ namespace ew
 
             CamPosition = positions[0];
             CamRotation = rotations[0];
+
+            DrawGizmos();
 
             // Copy entities to the native arrays             
             var copyToNativeJob = new CopyTransformsToNativeJob()
