@@ -5,8 +5,6 @@ using UnityEngine;
 
 public class LifeEnabler : MonoBehaviour
 {
-    public GameObject cubePrefab;
-
     // Start is called before the first frame update
     void Start()
     {
