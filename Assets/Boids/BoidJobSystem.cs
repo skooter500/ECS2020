@@ -45,6 +45,12 @@ namespace ew
         public ForceType forceType;
 
         public Vector3 force;
+        public Vector3 point;
+        public Vector3 normal;
+
+        public Vector3 start;
+        public Vector3 end;
+        
     }
 
     public struct Flee : IComponentData
@@ -232,7 +238,8 @@ namespace ew
             {
                 Vector3 position = p.Value;
                 Vector3 forward = math.mul(r.Value, Vector3.forward);
-                Debug.DrawLine(p.Value, (forward *oa.forwardFeelerDepth) + position, Color.cyan);
+                Debug.DrawLine(oa.start, oa.end, Color.cyan);
+                Debug.DrawLine(oa.point, oa.point + oa.normal * 10, Color.red);
             })
             .Run();
         }
@@ -284,7 +291,6 @@ namespace ew
 
             var copyToNativeHandle = copyToNativeJob.ScheduleParallel(translationsRotationsQuery, 1, Dependency);
             Dependency = JobHandle.CombineDependencies(Dependency, copyToNativeHandle);
-
             
             var oaJob = new ObstacleAvoidanceJob()
             {
@@ -292,6 +298,7 @@ namespace ew
                 translationTypeHandle = ttTHandle,
                 ltwTypeHandle = ltwTHandle,
                 obstacleAvoidanceTypeHandle = oaTHandle,
+                rotationTypeHandle = rTHandle,
                 collisionWorld = physicsWorld.PhysicsWorld.CollisionWorld
 
             };
@@ -998,6 +1005,7 @@ namespace ew
         [ReadOnly] public ComponentTypeHandle<Boid> boidTypeHandle;
         [ReadOnly] public ComponentTypeHandle<Translation> translationTypeHandle;
         [ReadOnly] public ComponentTypeHandle<LocalToWorld> ltwTypeHandle;
+        [ReadOnly] public ComponentTypeHandle<Rotation> rotationTypeHandle;
         public ComponentTypeHandle<ObstacleAvoidance> obstacleAvoidanceTypeHandle;
         public CollisionWorld collisionWorld;
 
@@ -1008,31 +1016,47 @@ namespace ew
             var translationsChunk = batchInChunk.GetNativeArray(translationTypeHandle);
             var ltwChunk = batchInChunk.GetNativeArray(ltwTypeHandle);
             var obstacleAvoidanceChunk = batchInChunk.GetNativeArray(obstacleAvoidanceTypeHandle);
+            var rotationChunk = batchInChunk.GetNativeArray(rotationTypeHandle);
+
 
             for (int i = 0; i < batchInChunk.Count; i++)
             {
                 float3 force = Vector3.zero;
                 Translation p = translationsChunk[i];
                 ObstacleAvoidance oa = obstacleAvoidanceChunk[i];                
+                LocalToWorld ltw = ltwChunk[i];
                 Boid b = boidChunk[i];
+                Rotation r = rotationChunk[i];
 
+                oa.normal = Vector3.zero;
+                oa.point = Vector3.zero;
+
+                float3 forward = math.mul(r.Value, Vector3.forward);
+                forward = math.normalize(forward);
                 var input = new RaycastInput() {
                     Start = p.Value,
-                    End = p.Value + ltwChunk[i].Forward * obstacleAvoidanceChunk[i].forwardFeelerDepth,
-                                        
-                    Filter = new CollisionFilter {
+                    End = p.Value + (forward * oa.forwardFeelerDepth),
+
+                    Filter = CollisionFilter.Default                 
+                    /*Filter = new CollisionFilter {
                         BelongsTo = ~0u,
                         CollidesWith = ~0u, // all 1s, so all layers, collide with everything
                         GroupIndex = 0
-                    }
+                    }*/
                 };
+
+                oa.start = input.Start;
+                oa.end = input.End;
                                     
                 if (collisionWorld.CastRay(input, out var hit))
                 {
                     float dist = math.distance(hit.Position, p.Value);
-                    force += hit.SurfaceNormal * (obstacleAvoidanceChunk[i].forwardFeelerDepth / dist);
+                    force += hit.SurfaceNormal * (oa.forwardFeelerDepth / dist);
+                    oa.normal = hit.SurfaceNormal;
+                    oa.point = hit.Position;
                 }
                 oa.force = force;
+                obstacleAvoidanceChunk[i] = oa;       
             }
         }
     }
