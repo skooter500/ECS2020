@@ -257,6 +257,9 @@ namespace ew
 
         protected override void OnUpdate()
         {
+
+            physicsWorld  = World.GetExistingSystem<Unity.Physics.Systems.BuildPhysicsWorld>();
+            
             BoidBootstrap bootstrap = this.bootstrap;
 
             ComponentTypeHandle<Wander> wTHandle = GetComponentTypeHandle<Wander>();
@@ -1037,19 +1040,21 @@ namespace ew
                     Start = p.Value,
                     End = p.Value + (forward * oa.forwardFeelerDepth),
 
-                    Filter = CollisionFilter.Default                 
-                    /*Filter = new CollisionFilter {
+                    //Filter = CollisionFilter.Default                 
+                    Filter = new CollisionFilter {
                         BelongsTo = ~0u,
-                        CollidesWith = ~0u, // all 1s, so all layers, collide with everything
+                        CollidesWith = ~0u,
                         GroupIndex = 0
-                    }*/
+                    }
                 };
 
                 oa.start = input.Start;
                 oa.end = input.End;
                                     
-                if (collisionWorld.CastRay(input, out var hit))
+                Unity.Physics.RaycastHit hit;
+                if (collisionWorld.CastRay(input, out hit))
                 {
+                    Debug.Log("Collides");
                     float dist = math.distance(hit.Position, p.Value);
                     force += hit.SurfaceNormal * (oa.forwardFeelerDepth / dist);
                     oa.normal = hit.SurfaceNormal;
