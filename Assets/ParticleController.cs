@@ -6,6 +6,7 @@ using UnityEngine;
 public class ParticleController : MonoBehaviour
 {
 
+    float delay = 1.0f;
     [Range(0,1000)]
     public float turnFraction = 1.618034f;
     [Range(0,5)]
@@ -15,6 +16,8 @@ public class ParticleController : MonoBehaviour
     public float speed = 1;
 
     public float spacer = 50;
+
+    public bool direction = true;
     
     // Start is called before the first frame update
     void Start()
@@ -22,6 +25,7 @@ public class ParticleController : MonoBehaviour
         ParticleSystem.Instance.Enabled = true;
         ParticleSystem.Instance.center = transform.position;
         ParticleSystem.Instance.CreateEntities();
+        //StartCoroutine(Change());
     }
 
     public void OnDestroy()
@@ -33,19 +37,83 @@ public class ParticleController : MonoBehaviour
         }
     }
 
-    float turnSpeed = 0.2f;
+    float turnSpeed = 1.0f;
+    float sizeSpeed = 0.001f;
 
+    System.Collections.IEnumerator Change()
+    {
+        while(true)
+        {
+            int which = (int) Random.Range(0,4);
+            switch(which)
+            {
+                case 0:
+                    turnFraction = Random.Range(1, 20);        
+                    break;
+                case 1:
+                    turnFraction = Random.Range(1, 20);              
+                    break;
+                case 2:
+                    radius = Random.Range(0.5f, 5f);     
+                    break;
+                case 3:
+                    direction = ! direction;
+                    break;                    
+            }
+            yield return new WaitForSeconds(delay);
+        }
+    }
+    
+    int clickCount = 0;
+    float lastClick = 0;
+    Coroutine cr = null;
+    public float[] newDelays = new float[3];
     // Update is called once per frame
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            turnFraction = Random.Range(0.01f, 5.0f);            
+            turnFraction = Random.Range(1, 50);            
+        
         }
         if (Input.GetKeyDown(KeyCode.Alpha1))
         {
-            radius = Random.Range(0.001f, 0.2f);
+            radius = Random.Range(0.5f, 5f);
         }
+        if (Input.GetKeyDown(KeyCode.Alpha2))
+        {
+            direction = ! direction;
+        }
+
+        if (Input.GetKeyDown(KeyCode.Alpha3))
+        {
+            if (cr != null)
+            {
+                StopCoroutine(cr);                        
+            }
+            clickCount ++;            
+            float now = Time.time;
+            float newDelay = now - lastClick;                   
+            lastClick = now;         
+            
+            if (clickCount > 1)
+            {
+                newDelays[clickCount - 2] = newDelay;
+                if (clickCount == 4)
+                {
+                    float sum = 0;
+                    foreach(float d in newDelays)                    
+                    {
+                        sum += d;
+                    }
+                    clickCount = 0;                    
+                    delay = sum / 3.0f;
+                    cr = StartCoroutine(Change());
+                }
+            }
+            
+        }
+        
         
         if (Input.GetAxis("Horizontal") > 0)
         {
@@ -58,11 +126,11 @@ public class ParticleController : MonoBehaviour
 
         if (Input.GetAxis("Vertical") > 0)
         {
-            radius += Time.deltaTime * turnSpeed;
+            radius += Time.deltaTime * sizeSpeed;
         }
         if (Input.GetAxis("Vertical") < 0)
         {
-            radius -= Time.deltaTime * turnSpeed;
+            radius -= Time.deltaTime * sizeSpeed;
         }
 
 

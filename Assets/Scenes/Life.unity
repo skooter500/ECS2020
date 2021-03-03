@@ -418,6 +418,7 @@ GameObject:
   - component: {fileID: 942453226}
   - component: {fileID: 942453225}
   - component: {fileID: 942453227}
+  - component: {fileID: 942453228}
   m_Layer: 6
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -681,6 +682,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 96cdd05e72489cb4cb9624a57346e567, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &942453228
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 942453219}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14edd360a0a4c104ab45f190c3845bfe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  scenes:
+  - Spirals
 --- !u!1 &1294973057
 GameObject:
   m_ObjectHideFlags: 0
@@ -710,7 +725,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: da47f91505756d7498c31b2cc5809ae1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cubePrefab: {fileID: 0}
 --- !u!4 &1294973059
 Transform:
   m_ObjectHideFlags: 0

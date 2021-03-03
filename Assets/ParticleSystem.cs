@@ -12,6 +12,9 @@ using UnityEngine;
 public struct Particle:IComponentData
 {
     public float3 targetPos;
+    public float3 targetPos1;
+    public float3 lerpedTargetPos;
+    public float3 lerpedTargetPos1;
 }
 
 public class ParticleSystem : SystemBase
@@ -23,9 +26,10 @@ public class ParticleSystem : SystemBase
     EntityArchetype particleArchetype;
     EntityManager entityManager;
 
-    int size = 10000;
+    int size = 20000;
 
     private NativeArray<Entity> entities;
+    private NativeArray<float3> targetPositions;
 
     EntityQuery particleQuery;
 
@@ -55,13 +59,14 @@ public class ParticleSystem : SystemBase
                     typeof(Translation),
                     typeof(Rotation),
                     typeof(LocalToWorld),
-                    typeof(RenderBounds),
+                    typeof(RenderBounds),                    
+                    typeof(NonUniformScale),
                     typeof(Particle)
 
         );
 
         Material material = Resources.Load<Material>("SpiralMaterial");
-        GameObject c = Resources.Load<GameObject>("Sphere");
+        GameObject c = Resources.Load<GameObject>("Cube 1");
         Mesh mesh = c.GetComponent<MeshFilter>().sharedMesh;
         particleMesh = new RenderMesh
         {
@@ -70,11 +75,18 @@ public class ParticleSystem : SystemBase
         };
     }
 
+    protected override void OnDestroy()
+    {
+        entities.Dispose();
+        targetPositions.Dispose();
+    }
+
     protected override void OnCreate()
     {
         Instance = this;
 
         entities = new NativeArray<Entity>(size, Allocator.Persistent);
+        targetPositions = new NativeArray<float3>(size, Allocator.Persistent);
         Enabled = false;
         entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
         CreateArchetype();
@@ -95,19 +107,47 @@ public class ParticleSystem : SystemBase
     {
         float turnFraction = controller.turnFraction;
         float radius = controller.radius;
-        float inc = (math.PI * 2.0f) * turnFraction;
+        float inc = (math.PI * 2.0f) / turnFraction;
         float timeDelta = Time.DeltaTime;
         float speed = controller.speed;
         float spacer = controller.spacer == 0 ? 1 : controller.spacer;
-        var jobHandle = Entities.ForEach((int entityInQueryIndex, ref Particle p, ref Translation t) =>
+        bool direction = controller.direction;
+        NativeArray<float3> targetPositions = this.targetPositions;
+        var jobHandle = Entities
+            .WithNativeDisableParallelForRestriction(targetPositions)
+            .ForEach((int entityInQueryIndex, ref Particle p, ref Translation t, ref NonUniformScale s, ref Rotation r) =>
         {
             float angle = entityInQueryIndex * inc;
             
-            //int cycles = 1 + (int)(angle / (math.PI * 2.0f));
             float cycles = 1 + (entityInQueryIndex / spacer);
 
-            p.targetPos = new float3(math.cos(angle) * radius * cycles, math.sin(angle) * radius * cycles, 0);
-            t.Value = math.lerp(t.Value, p.targetPos, timeDelta * speed);
+            float3 target = new float3(
+                direction ? math.cos(angle) * radius * cycles :  math.sin(angle) * radius * cycles, 
+                direction ? math.sin(angle) * radius * cycles :  math.cos(angle) * radius * cycles, 
+                0);
+            p.lerpedTargetPos = math.lerp(p.lerpedTargetPos, target, timeDelta * speed);
+            targetPositions[entityInQueryIndex] = p.lerpedTargetPos;
+            
+            float3 previous;
+            if (entityInQueryIndex >= turnFraction)
+            {
+                previous = targetPositions[entityInQueryIndex - (int) turnFraction];
+            }
+            else
+            {
+                previous = Vector3.zero;
+            }
+
+            float3 toTarget1 = p.lerpedTargetPos - previous;
+            float3 cent = previous + ((toTarget1) / 2.0f);
+
+            s.Value = new float3(math.length(toTarget1), 0.2f, 0.2f);
+            
+            Quaternion q = Quaternion.AngleAxis(math.atan2(toTarget1.y, toTarget1.x) * Mathf.Rad2Deg, Vector3.forward);
+            r.Value = q;
+
+
+            t.Value = cent;
         })
         .ScheduleParallel(Dependency);
         Dependency = JobHandle.CombineDependencies(Dependency, jobHandle);
