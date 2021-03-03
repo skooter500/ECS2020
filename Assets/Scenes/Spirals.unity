@@ -134,6 +134,7 @@ GameObject:
   - component: {fileID: 166563972}
   - component: {fileID: 166563971}
   - component: {fileID: 166563970}
+  - component: {fileID: 166563973}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -200,12 +201,24 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 166563969}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1, z: -10}
+  m_LocalPosition: {x: 0, y: 1, z: -80}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &166563973
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 166563969}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 96cdd05e72489cb4cb9624a57346e567, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &956650604
 GameObject:
   m_ObjectHideFlags: 0
@@ -235,6 +248,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2b45bd5bbb1d93f4a8e0787c7e75a740, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  turnFraction: 1.618034
+  radius: 0.038
+  speed: 0.2
+  spacer: 3
 --- !u!4 &956650606
 Transform:
   m_ObjectHideFlags: 0
@@ -243,7 +260,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 956650604}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -817.84, y: 136.51794, z: -85.34229}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -335,10 +352,10 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1381882135}
-  m_LocalRotation: {x: 0.40821788, y: -0.23456968, z: 0.10938163, w: 0.8754261}
+  m_LocalRotation: {x: 0.16476603, y: 0.019515485, z: -0.016648728, w: 0.9859991}
   m_LocalPosition: {x: 0, y: 3, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 1
-  m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+  m_LocalEulerAnglesHint: {x: 19, y: 2, z: -1.6}

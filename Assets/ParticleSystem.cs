@@ -31,6 +31,8 @@ public class ParticleSystem : SystemBase
 
     public static ParticleSystem Instance;
 
+    public ParticleController controller;
+    
     public void CreateEntities()
     {
         entityManager.CreateEntity(particleArchetype, entities);
@@ -38,11 +40,13 @@ public class ParticleSystem : SystemBase
         particleQuery = GetEntityQuery(new EntityQueryDesc()
         {
             All = new ComponentType[] {
-                    ComponentType.ReadOnly<Cell>()
+                    ComponentType.ReadOnly<Particle>()
                 }
         });
 
         entityManager.AddSharedComponentData(particleQuery, particleMesh);
+
+        controller = GameObject.FindObjectOfType<ParticleController>();
     }
 
     private void CreateArchetype()
@@ -50,14 +54,13 @@ public class ParticleSystem : SystemBase
         particleArchetype = entityManager.CreateArchetype(
                     typeof(Translation),
                     typeof(Rotation),
-                    typeof(NonUniformScale),
                     typeof(LocalToWorld),
                     typeof(RenderBounds),
                     typeof(Particle)
 
         );
 
-        Material material = Resources.Load<Material>("LifeMaterial");
+        Material material = Resources.Load<Material>("SpiralMaterial");
         GameObject c = Resources.Load<GameObject>("Sphere");
         Mesh mesh = c.GetComponent<MeshFilter>().sharedMesh;
         particleMesh = new RenderMesh
@@ -90,15 +93,18 @@ public class ParticleSystem : SystemBase
 
     protected override void OnUpdate()
     {
-        float turnFraction = 1.618034f;
-        float radius = 0.038f;
+        float turnFraction = controller.turnFraction;
+        float radius = controller.radius;
         float inc = (math.PI * 2.0f) * turnFraction;
         float timeDelta = Time.DeltaTime;
-        float speed = 1;
+        float speed = controller.speed;
+        float spacer = controller.spacer == 0 ? 1 : controller.spacer;
         var jobHandle = Entities.ForEach((int entityInQueryIndex, ref Particle p, ref Translation t) =>
         {
             float angle = entityInQueryIndex * inc;
-            int cycles = (int)(angle / (math.PI * 2.0f));
+            
+            //int cycles = 1 + (int)(angle / (math.PI * 2.0f));
+            float cycles = 1 + (entityInQueryIndex / spacer);
 
             p.targetPos = new float3(math.cos(angle) * radius * cycles, math.sin(angle) * radius * cycles, 0);
             t.Value = math.lerp(t.Value, p.targetPos, timeDelta * speed);
