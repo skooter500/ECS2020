@@ -60,29 +60,34 @@ public class ParticleController : MonoBehaviour
         direction = newDir;
     }
 
+    void Randomize()
+    {
+        int which = (int) Random.Range(0,4);
+        switch(which)
+        {
+            case 0:
+                turnFraction = Random.Range(1, 20);        
+                break;
+            case 1:
+                turnFraction = Random.Range(1, 20);              
+                break;
+            case 2:
+                radius = Random.Range(0.5f, 5f);     
+                turnFraction = Random.Range(1, 20);      
+                break;
+            case 3:
+                target.z = distances[Random.Range(0, distances.Length)] ;
+                ChooseNewDirection();
+                break;                    
+        }
+    }
+
     System.Collections.IEnumerator Change()
     {
         while(true)
         {
-            int which = (int) Random.Range(0,4);
-            switch(which)
-            {
-                case 0:
-                    turnFraction = Random.Range(1, 20);        
-                    break;
-                case 1:
-                    turnFraction = Random.Range(1, 20);              
-                    break;
-                case 2:
-                    radius = Random.Range(0.5f, 5f);     
-                    turnFraction = Random.Range(1, 20);      
-                    break;
-                case 3:
-                    target.z = distances[Random.Range(0, distances.Length)] ;
-                    ChooseNewDirection();
-                    break;                    
-            }
             yield return new WaitForSeconds(delay);
+            Randomize();            
         }
     }
     
@@ -118,7 +123,7 @@ public class ParticleController : MonoBehaviour
             float now = Time.time;
             float newDelay = now - lastClick;                   
             lastClick = now;         
-        
+            Randomize();
             if (clickCount > 1)
             {
                 newDelays[clickCount - 2] = newDelay;
@@ -131,9 +136,10 @@ public class ParticleController : MonoBehaviour
                     }
                     clickCount = 0;                    
                     delay = sum / 3.0f;                    
+                    cr = StartCoroutine(Change());     
                 }
             }       
-            cr = StartCoroutine(Change());     
+            
         }
 
         if (Input.GetKeyDown(KeyCode.Alpha4) || Input.GetKeyDown(KeyCode.Joystick1Button5))
