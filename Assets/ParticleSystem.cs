@@ -113,6 +113,7 @@ public class ParticleSystem : SystemBase
         float spacer = controller.spacer == 0 ? 1 : controller.spacer;
         bool direction = controller.direction;
         NativeArray<float3> targetPositions = this.targetPositions;
+        float thickness = controller.thickness;
         var jobHandle = Entities
             .WithNativeDisableParallelForRestriction(targetPositions)
             .ForEach((int entityInQueryIndex, ref Particle p, ref Translation t, ref NonUniformScale s, ref Rotation r) =>
@@ -141,7 +142,7 @@ public class ParticleSystem : SystemBase
             float3 toTarget1 = p.lerpedTargetPos - previous;
             float3 cent = previous + ((toTarget1) / 2.0f);
 
-            s.Value = new float3(math.length(toTarget1), 0.2f, 0.2f);
+            s.Value = new float3(thickness, thickness, math.length(toTarget1));
             
             //Quaternion q = Quaternion.AngleAxis(math.atan2(toTarget1.y, toTarget1.x) * Mathf.Rad2Deg, Vector3.forward);
             Quaternion q = Quaternion.LookRotation(toTarget1);

@@ -18,6 +18,8 @@ public class ParticleController : MonoBehaviour
     public float spacer = 50;
 
     public bool direction = true;
+
+    public float thickness = 1;
     
     // Start is called before the first frame update
     void Start()

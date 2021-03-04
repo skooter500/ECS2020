@@ -9,13 +9,13 @@ Shader "Custom/ColorShader2"
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" }
-        LOD 200
-
-        CGPROGRAM
-        // Physically based Standard lighting model, and enable shadows on all light types
-        #pragma surface surf Standard fullforwardshadows
-
+        Tags {"Queue" = "Transparent" "RenderType"="Transparent" }
+		LOD 200
+		
+		CGPROGRAM
+		// Physically based Standard lighting model, and enable shadows on all light types
+		#pragma surface surf Standard alpha:fade
+        
         // Use shader model 3.0 target, to get nicer looking lighting
         #pragma target 3.0
 
@@ -79,7 +79,7 @@ Shader "Custom/ColorShader2"
 			// Metallic and smoothness come from slider variables
             o.Metallic = _Metallic;
             o.Smoothness = _Glossiness;
-            o.Alpha = 0.9;
+            o.Alpha = 0.2;
         }
         ENDCG
     }
