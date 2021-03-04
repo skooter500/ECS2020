@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.Entities;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class ParticleController : MonoBehaviour
 {
@@ -73,21 +74,22 @@ public class ParticleController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Space))
+        Keyboard keyboard = Keyboard.current;
+        if (keyboard.spaceKey.wasPressedThisFrame)
         {
             turnFraction = Random.Range(1, 50);            
         
         }
-        if (Input.GetKeyDown(KeyCode.Alpha1))
+        if (keyboard.digit1Key.wasPressedThisFrame)
         {
             radius = Random.Range(0.5f, 5f);
         }
-        if (Input.GetKeyDown(KeyCode.Alpha2))
+        if (keyboard.digit2Key.wasPressedThisFrame)
         {
             direction = ! direction;
         }
 
-        if (Input.GetKeyDown(KeyCode.Alpha3))
+        if (keyboard.digit3Key.wasPressedThisFrame)
         {
             if (cr != null)
             {
@@ -116,7 +118,7 @@ public class ParticleController : MonoBehaviour
             
         }
         
-        
+        /*        
         if (Input.GetAxis("Horizontal") > 0)
         {
             turnFraction += Time.deltaTime * turnSpeed;
@@ -134,7 +136,7 @@ public class ParticleController : MonoBehaviour
         {
             radius -= Time.deltaTime * sizeSpeed;
         }
-
+        */
 
     }
 }

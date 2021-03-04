@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.InputSystem;
 
 public class SceneSwitcher : MonoBehaviour
 {
@@ -10,8 +11,9 @@ public class SceneSwitcher : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        Keyboard keyboard = Keyboard.current;
         // Input.GetKeyDown(KeyCode.Joystick1Button6) || 
-        if (Input.GetKeyDown(KeyCode.U))
+        if (keyboard.uKey.wasPressedThisFrame)
         {
             int sceneCount = UnityEngine.SceneManagement.SceneManager.sceneCountInBuildSettings;
             string[] scenes = new string[sceneCount];

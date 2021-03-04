@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class EscapeToQuit : MonoBehaviour {
 
@@ -11,7 +12,8 @@ public class EscapeToQuit : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-        if (Input.GetKeyDown(KeyCode.Escape))
+		Keyboard keyboard = Keyboard.current;
+        if (keyboard.escapeKey.wasPressedThisFrame)
         {
             Application.Quit();
         }
