@@ -265,7 +265,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   turnFraction: 100
   radius: 1
-  speed: 1
+  speed: 2
   spacer: 3
   direction: 1
   newDelays:

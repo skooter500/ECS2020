@@ -124,14 +124,14 @@ public class ParticleSystem : SystemBase
             float3 target = new float3(
                 direction ? math.cos(angle) * radius * cycles :  math.sin(angle) * radius * cycles, 
                 direction ? math.sin(angle) * radius * cycles :  math.cos(angle) * radius * cycles, 
-                0);
+                entityInQueryIndex);
             p.lerpedTargetPos = math.lerp(p.lerpedTargetPos, target, timeDelta * speed);
             targetPositions[entityInQueryIndex] = p.lerpedTargetPos;
             
             float3 previous;
-            if (entityInQueryIndex >= turnFraction)
+            if (entityInQueryIndex > turnFraction)
             {
-                previous = targetPositions[entityInQueryIndex - (int) turnFraction];
+                previous = targetPositions[entityInQueryIndex - (int) turnFraction - 1];
             }
             else
             {
@@ -143,7 +143,8 @@ public class ParticleSystem : SystemBase
 
             s.Value = new float3(math.length(toTarget1), 0.2f, 0.2f);
             
-            Quaternion q = Quaternion.AngleAxis(math.atan2(toTarget1.y, toTarget1.x) * Mathf.Rad2Deg, Vector3.forward);
+            //Quaternion q = Quaternion.AngleAxis(math.atan2(toTarget1.y, toTarget1.x) * Mathf.Rad2Deg, Vector3.forward);
+            Quaternion q = Quaternion.LookRotation(toTarget1);
             r.Value = q;
 
 
