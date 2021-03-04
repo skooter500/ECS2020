@@ -111,7 +111,7 @@ public class ParticleSystem : SystemBase
         float timeDelta = Time.DeltaTime;
         float speed = controller.speed;
         float spacer = controller.spacer == 0 ? 1 : controller.spacer;
-        bool direction = controller.direction;
+        int direction = controller.direction;
         NativeArray<float3> targetPositions = this.targetPositions;
         float thickness = controller.thickness;
         var jobHandle = Entities
@@ -122,10 +122,35 @@ public class ParticleSystem : SystemBase
             
             float cycles = 1 + (entityInQueryIndex / spacer);
 
-            float3 target = new float3(
-                direction ? math.cos(angle) * radius * cycles :  math.sin(angle) * radius * cycles, 
-                direction ? math.sin(angle) * radius * cycles :  math.cos(angle) * radius * cycles, 
-                entityInQueryIndex);
+            float3 target = new float3();
+            switch (direction)
+            {
+                case 0:
+                    target = new float3(
+                        math.cos(angle) * radius * cycles, 
+                        math.sin(angle) * radius * cycles,
+                        entityInQueryIndex);
+                    break;
+                case 1:
+                    target = new float3(
+                        - math.cos(angle) * radius * cycles, 
+                        math.sin(angle) * radius * cycles,
+                        entityInQueryIndex);
+                    break;
+                case 2:
+                    target = new float3(
+                        math.cos(angle) * radius * cycles, 
+                        - math.sin(angle) * radius * cycles,
+                        entityInQueryIndex);
+                    break;
+                case 3:
+                    target = new float3(
+                        - math.cos(angle) * radius * cycles, 
+                        - math.sin(angle) * radius * cycles,
+                        entityInQueryIndex);
+                    break;
+
+            } 
             p.lerpedTargetPos = math.lerp(p.lerpedTargetPos, target, timeDelta * speed);
             targetPositions[entityInQueryIndex] = p.lerpedTargetPos;
             

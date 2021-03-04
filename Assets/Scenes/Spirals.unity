@@ -353,6 +353,10 @@ MonoBehaviour:
   spacer: 3
   direction: 1
   thickness: 5
+  distances:
+  - 200
+  - 500
+  - 1000
   newDelays:
   - 0
   - 0
