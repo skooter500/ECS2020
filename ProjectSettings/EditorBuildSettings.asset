@@ -15,5 +15,6 @@ EditorBuildSettings:
     path: Assets/Scenes/PureECSScene.unity
     guid: 5b8b10108766f7d4db03eb3aae000e2d
   m_configObjects:
+    com.unity.input.settings: {fileID: 11400000, guid: df8c6b8b32e57ed49b857dd29060b040, type: 2}
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 212a165b85801e1419ed8b8e75c8a75f, type: 2}
     com.unity.xr.openxr.settings4: {fileID: 11400000, guid: 4e804a4f8850a9e4a92471643cd7b298, type: 2}

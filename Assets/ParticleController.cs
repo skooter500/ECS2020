@@ -99,7 +99,7 @@ public class ParticleController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        camera.position = Vector3.Lerp(camera.position, target, Time.deltaTime);        
+        //camera.position = Vector3.Lerp(camera.position, target, Time.deltaTime);        
         Keyboard keyboard = Keyboard.current;
         Gamepad gamepad = Gamepad.current;
         if (keyboard.spaceKey.wasPressedThisFrame || (gamepad != null && gamepad.aButton.wasPressedThisFrame))

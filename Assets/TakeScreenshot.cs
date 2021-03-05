@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
 using System;
+using UnityEngine.InputSystem;
+
 
 public class TakeScreenshot : MonoBehaviour {
 
@@ -49,7 +51,8 @@ public class TakeScreenshot : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-        if (Input.GetKeyDown(KeyCode.JoystickButton7))
+        Gamepad gamepad = Gamepad.current;
+        if (gamepad.startButton.wasPressedThisFrame)
         {
             string filename = GenerateFileName();
             Debug.Log("Capturing screenshot to: " + filename);

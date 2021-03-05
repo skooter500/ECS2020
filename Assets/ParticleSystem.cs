@@ -26,7 +26,7 @@ public class ParticleSystem : SystemBase
     EntityArchetype particleArchetype;
     EntityManager entityManager;
 
-    int size = 20000;
+    int size = 1000;
 
     private NativeArray<Entity> entities;
     private NativeArray<float3> targetPositions;
@@ -112,6 +112,7 @@ public class ParticleSystem : SystemBase
         float speed = controller.speed;
         float spacer = controller.spacer == 0 ? 1 : controller.spacer;
         int direction = controller.direction;
+        int size = this.size;
         NativeArray<float3> targetPositions = this.targetPositions;
         float thickness = controller.thickness;
         var jobHandle = Entities
@@ -120,7 +121,16 @@ public class ParticleSystem : SystemBase
         {
             float angle = entityInQueryIndex * inc;
             
-            float cycles = 1 + (entityInQueryIndex / spacer);
+            float cycles;
+             if (entityInQueryIndex < size / 2)
+             {
+                 cycles = 1 + (entityInQueryIndex / spacer);
+             }
+             else
+             {
+                 int i = (size -1) - entityInQueryIndex;
+                 cycles = 1 + (i / spacer);
+             }
 
             float3 target = new float3();
             switch (direction)

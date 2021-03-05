@@ -6,6 +6,8 @@ Shader "Custom/ColorShader2"
         _MainTex ("Albedo (RGB)", 2D) = "white" {}
         _Glossiness ("Smoothness", Range(0,1)) = 0.5
         _Metallic ("Metallic", Range(0,1)) = 0.0
+        _ColorScaler ("Color Scaler", Range(0.1,1000)) = 100.0
+
     }
     SubShader
     {
@@ -27,6 +29,7 @@ Shader "Custom/ColorShader2"
 
         half _Glossiness;
         half _Metallic;
+        half _ColorScaler;
         fixed4 _Color;
 
         // Add instancing support for this shader. You need to check 'Enable Instancing' on materials that use the shader.
@@ -72,7 +75,7 @@ Shader "Custom/ColorShader2"
 			fixed3 c = hsv_to_rgb(float3(hue, 1, 1));
             */
             float dist = sqrt(pow(IN.worldPos.x,2) + pow(IN.worldPos.y, 2));
-			float hue = abs(((dist / 100.0f) - _Time*5.0))  % 1.0;
+			float hue = abs(((dist / _ColorScaler) - _Time*5.0))  % 1.0;
 			fixed3 c = hsv_to_rgb(float3(hue, 1, 1));
 
 			o.Albedo = c.rgb;

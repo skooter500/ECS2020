@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using UnityEngine.InputSystem;
 
 public class FPSController : MonoBehaviour
 {
@@ -54,7 +55,7 @@ public class FPSController : MonoBehaviour
         Vector3 forward = mainCamera.transform.forward;
         //forward.y = 0;
         forward.Normalize();
-        transform.position += forward * units;
+        transform.position += Vector3.forward * units;
     }
 
     void Fly(float units)
@@ -78,10 +79,18 @@ public class FPSController : MonoBehaviour
         float speed = this.speed;
 
         invcosTheta1 = Vector3.Dot(transform.forward, Vector3.up);
+        
 
         float runAxis = 0; // Input.GetAxis("Run Axis");
 
-        if (Input.GetKey(KeyCode.Escape))
+        Gamepad gamepad = Gamepad.current;
+
+        Vector2 cont = gamepad.leftStick.ReadValue();
+        Walk(cont.y * speed * Time.deltaTime);
+        //Strafe(cont.x * speed * Time.deltaTime);
+
+
+        /*if (Input.GetKey(KeyCode.Escape))
         {
             Application.Quit();
         }
@@ -124,5 +133,6 @@ public class FPSController : MonoBehaviour
         float contStrafe = Input.GetAxis("Horizontal");
         Walk(contWalk * speed * Time.deltaTime);
         Strafe(contStrafe * speed * Time.deltaTime);
+        */
     }
 }
