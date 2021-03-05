@@ -372,6 +372,7 @@ MonoBehaviour:
   - 200
   - 500
   - 1000
+  - 2000
   newDelays:
   - 0
   - 0

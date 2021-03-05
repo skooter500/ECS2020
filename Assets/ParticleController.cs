@@ -95,10 +95,11 @@ public class ParticleController : MonoBehaviour
     float lastClick = 0;
     Coroutine cr = null;
     public float[] newDelays = new float[4];
+    public bool open = true;
     // Update is called once per frame
     void Update()
     {
-        camera.position = Vector3.Lerp(camera.position, target, Time.deltaTime);
+        //camera.position = Vector3.Lerp(camera.position, target, Time.deltaTime);
         if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Joystick1Button0))
         {
             turnFraction = Random.Range(1, 50);            

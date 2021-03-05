@@ -114,13 +114,31 @@ public class ParticleSystem : SystemBase
         int direction = controller.direction;
         NativeArray<float3> targetPositions = this.targetPositions;
         float thickness = controller.thickness;
+        bool open = controller.open;
+        int size = this.size;
         var jobHandle = Entities
             .WithNativeDisableParallelForRestriction(targetPositions)
             .ForEach((int entityInQueryIndex, ref Particle p, ref Translation t, ref NonUniformScale s, ref Rotation r) =>
         {
             float angle = entityInQueryIndex * inc;
             
-            float cycles = 1 + (entityInQueryIndex / spacer);
+            float cycles;
+            if (open)
+            {
+                cycles = 1 + (entityInQueryIndex / spacer);                
+            }
+            else
+            {
+                if (entityInQueryIndex < size / 2)
+                {
+                    cycles = 1 + (entityInQueryIndex / spacer);
+                }
+                else
+                {
+                    int i = (size -1) - entityInQueryIndex;
+                    cycles = 1 + (i / spacer);
+                }
+            }
 
             float3 target = new float3();
             switch (direction)
