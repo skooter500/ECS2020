@@ -280,7 +280,7 @@ namespace ew
             CamPosition = positions[0];
             CamRotation = rotations[0];
 
-            DrawGizmos();
+            //DrawGizmos();
 
             // Copy entities to the native arrays             
             var copyToNativeJob = new CopyTransformsToNativeJob()

@@ -11,7 +11,7 @@ public class SceneSwitcher : MonoBehaviour
     void Update()
     {
         // Input.GetKeyDown(KeyCode.Joystick1Button6) || 
-        if (Input.GetKeyDown(KeyCode.U))
+        if (Input.GetKeyDown(KeyCode.U) || Input.GetKeyDown(KeyCode.Joystick1Button6))
         {
             int sceneCount = UnityEngine.SceneManagement.SceneManager.sceneCountInBuildSettings;
             string[] scenes = new string[sceneCount];

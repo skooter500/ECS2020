@@ -10,7 +10,9 @@ public class LifeEnabler : MonoBehaviour
     {
         TwoDLifeSystem.Instance.Enabled = true;
         TwoDLifeSystem.Instance.center = transform.position;
+        TwoDLifeSystem.Instance.populated = false;
         TwoDLifeSystem.Instance.CreateEntities();
+        TwoDLifeSystem.Instance.Clear();
         TwoDLifeSystem.Instance.Cross();
     }
 

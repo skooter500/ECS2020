@@ -36,7 +36,7 @@ public class TwoDLifeSystem : SystemBase
 
     EntityQuery cellQuery;
 
-    public float delay = 0.1f;
+    public float delay = 0.0f;
 
     internal static readonly AABB OutOfBounds = new AABB
     {
@@ -50,11 +50,10 @@ public class TwoDLifeSystem : SystemBase
     public void Randomize()
     {
         int halfSize = size / 2;
-        int centerBit = halfSize;
         {
-            for (int row = halfSize - centerBit; row <= halfSize + centerBit; row++)
+            for (int row = 0; row < size; row++)
             {
-                for (int col = halfSize - centerBit; col <= halfSize + centerBit; col++)
+                for (int col = 0; col <size; col++)
                 {
                     float dice = UnityEngine.Random.Range(0.0f, 1.0f);
                     if (dice > 0.5f)
@@ -169,7 +168,7 @@ public class TwoDLifeSystem : SystemBase
 
     float timePassed = 0;
     int generation = 0;
-    bool populated = false;
+    public bool populated = false;
 
     public static int ToCell(int size, int row, int col)
     {

@@ -639,7 +639,7 @@ MonoBehaviour:
   maxBoidsPerFrame: 500
   seekWeight: 0
   constrainTranslation: {x: 0, y: 0, z: 0}
-  numBoids: 100
+  numBoids: 1000
   radius: 1000
   neighbourDistance: 150
   speed: 2

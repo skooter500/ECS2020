@@ -410,6 +410,8 @@ namespace ew
         void Start()
         {
             BoidJobSystem.Instance.Enabled = true;
+            HeadsAndTailsSystem.Instance.Enabled = true;
+            SpineSystem.Instance.Enabled = true;
             allTheBoids = new NativeArray<Entity>(numBoids, Allocator.Persistent);
             allTheheadsAndTails = new NativeArray<Entity>(numBoids * 2, Allocator.Persistent);
             allTheSpines = new NativeArray<Entity>(numBoids * spineLength, Allocator.Persistent);
