@@ -64,6 +64,8 @@ namespace ew
         NativeArray<Entity> allTheheadsAndTails;
         NativeArray<Entity> allTheSpines;
 
+        BoidJobSystem boidJobSystem;
+
         public Coroutine cr;
 
         public static float Map(float value, float r1, float r2, float m1, float m2)
@@ -76,30 +78,21 @@ namespace ew
 
         public void OnDestroy()
         {
-            //DestroyEntities();
-            /*if (!isContainer)
-            {
-                allTheBoids.Dispose();
-                allTheheadsAndTails.Dispose();
-                allTheSpines.Dispose();
-            }
-            */
-        }
+            Debug.Log("OnDestroy BoidBootstrap");
 
-        public void DestroyEntities()
-        {
-            if (!isContainer)
+            if (World.DefaultGameObjectInjectionWorld != null && World.DefaultGameObjectInjectionWorld.IsCreated)
             {
+                Debug.Log("Destroying the entities");
                 entityManager.DestroyEntity(allTheBoids);
                 entityManager.DestroyEntity(allTheheadsAndTails);
                 entityManager.DestroyEntity(allTheSpines);
-                allTheBoids.Dispose();
-                allTheheadsAndTails.Dispose();
-                allTheSpines.Dispose();
                 BoidJobSystem.Instance.Enabled = false;
                 SpineSystem.Instance.Enabled = false;
                 HeadsAndTailsSystem.Instance.Enabled = false;
-            }
+            }    
+            allTheBoids.Dispose();
+            allTheheadsAndTails.Dispose();
+            allTheSpines.Dispose();
         }
 
         Entity CreateSmallBoid(Vector3 pos, Quaternion q, int boidId, float size)
@@ -138,6 +131,9 @@ namespace ew
                 target = UnityEngine.Random.insideUnitSphere * 1.2f
             });
             entityManager.SetComponentData(boidEntity, new Spine() { parent = -1, spineId = boidId });
+
+            entityManager.SetComponentData(boidEntity, new ObstacleAvoidance() {forwardFeelerDepth = 50, forceType = ObstacleAvoidance.ForceType.normal });
+            
 
             entityManager.AddSharedComponentData(boidEntity, bodyMesh);
 
@@ -328,6 +324,7 @@ namespace ew
                 target = UnityEngine.Random.insideUnitSphere * 1.2f
             });                        
             entityManager.SetComponentData(boidEntity, new Spine() { parent = -1, spineId = (spineLength + 1) * boidId });
+            entityManager.SetComponentData(boidEntity, new ObstacleAvoidance() {forwardFeelerDepth = 50, forceType = ObstacleAvoidance.ForceType.normal});
 
             entityManager.AddSharedComponentData(boidEntity, bodyMesh);
 
@@ -412,81 +409,72 @@ namespace ew
         // Start is called before the first frame update
         void Start()
         {
-            if (!isContainer)
-            {
-                allTheBoids = new NativeArray<Entity>(numBoids, Allocator.Persistent);
-                allTheheadsAndTails = new NativeArray<Entity>(numBoids * 2, Allocator.Persistent);
-                allTheSpines = new NativeArray<Entity>(numBoids * spineLength, Allocator.Persistent);
+            BoidJobSystem.Instance.Enabled = true;
+            HeadsAndTailsSystem.Instance.Enabled = true;
+            SpineSystem.Instance.Enabled = true;
+            allTheBoids = new NativeArray<Entity>(numBoids, Allocator.Persistent);
+            allTheheadsAndTails = new NativeArray<Entity>(numBoids * 2, Allocator.Persistent);
+            allTheSpines = new NativeArray<Entity>(numBoids * spineLength, Allocator.Persistent);
 
-                entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
+            entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
 
-                constrainTranslation = transform.position;
-                Cursor.visible = false;
-                constrainWeight = baseConstrainWeight;
+            constrainTranslation = transform.position;
+            Cursor.visible = false;
+            constrainWeight = baseConstrainWeight;
 
-                boidArchitype = entityManager.CreateArchetype(
-                    typeof(Translation),
-                    typeof(Rotation),
-                    typeof(NonUniformScale),
-                    typeof(LocalToWorld),
-                    typeof(RenderBounds),
-                    typeof(Boid),
-                    typeof(Seperation),
-                    typeof(Cohesion),
-                    typeof(Alignment),
-                    typeof(Wander),
-                    typeof(Constrain),
-                    typeof(Flee),
-                    typeof(Seek),
-                    typeof(Spine)
+            boidArchitype = entityManager.CreateArchetype(
+                typeof(Translation),
+                typeof(Rotation),
+                typeof(NonUniformScale),
+                typeof(LocalToWorld),
+                typeof(RenderBounds),
+                typeof(Boid),
+                typeof(Seperation),
+                typeof(Cohesion),
+                typeof(Alignment),
+                typeof(Wander),
+                typeof(Constrain),
+                typeof(Flee),
+                typeof(Seek),
+                typeof(ObstacleAvoidance),
+                typeof(Spine)
 
+            );
+
+            headArchitype = entityManager.CreateArchetype(
+                typeof(Translation),
+                typeof(Rotation),
+                typeof(NonUniformScale),
+                typeof(LocalToWorld),
+                typeof(RenderBounds),
+                typeof(Head)
                 );
 
-                headArchitype = entityManager.CreateArchetype(
-                    typeof(Translation),
-                    typeof(Rotation),
-                    typeof(NonUniformScale),
-                    typeof(LocalToWorld),
-                    typeof(RenderBounds),
-                    typeof(Head)
-                    );
-
-                tailArchitype = entityManager.CreateArchetype(
-                            typeof(Translation),
-                            typeof(Rotation),
-                            typeof(NonUniformScale),
-                            typeof(LocalToWorld),
-                            typeof(RenderBounds),
-                            typeof(Tail)
-                            );
-
-                spineArchitype = entityManager.CreateArchetype(
+            tailArchitype = entityManager.CreateArchetype(
                         typeof(Translation),
                         typeof(Rotation),
                         typeof(NonUniformScale),
                         typeof(LocalToWorld),
                         typeof(RenderBounds),
-                        typeof(Spine)
+                        typeof(Tail)
                         );
 
-                bodyMesh = new RenderMesh
-                {
-                    mesh = mesh,
-                    material = material
-                };
-                StartCoroutine(CreateBoids());
-            }
+            spineArchitype = entityManager.CreateArchetype(
+                    typeof(Translation),
+                    typeof(Rotation),
+                    typeof(NonUniformScale),
+                    typeof(LocalToWorld),
+                    typeof(RenderBounds),
+                    typeof(Spine)
+                    );
 
-            //StartCoroutine(CreateBoids());
-
-            /*
-
-            for (int i = 0; i < numBoids; i++)
+            bodyMesh = new RenderMesh
             {
-
-            }
-            */
-
+                mesh = mesh,
+                material = material
+            };
+            StartCoroutine(CreateBoids());
+            
             Cursor.visible = false;
 
             cr = StartCoroutine(Show());
@@ -597,15 +585,6 @@ namespace ew
         void Awake()
         {
             //SceneManager.sceneUnloaded += DestroyTheBoids;
-        }
-
-        void DestroyTheBoids<Scene>(Scene scene)
-        {
-            if (!isContainer)
-            {
-                Debug.Log("Destroying the boids in " + SceneManager.GetActiveScene().name);
-                DestroyEntities();
-            }
         }
 
         void DoExplosion(int expType)

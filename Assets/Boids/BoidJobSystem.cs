@@ -4,6 +4,8 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
+using Unity.Physics;
+using Unity.Physics.Systems;
 using Unity.Transforms;
 using UnityEngine;
 
@@ -25,6 +27,30 @@ namespace ew
 
         public Vector3 fleeForce; // Have to put this here because there is a limit to the number of components in IJobProcessComponentData
         public Vector3 seekForce; // Have to put this here because there is a limit to the number of components in IJobProcessComponentData
+    }
+
+    public struct ObstacleAvoidance:IComponentData
+    {
+        public float forwardFeelerDepth;
+        public Vector3 feeler;
+
+        public enum ForceType
+        {
+            normal,
+            incident,
+            up,
+            braking
+        };
+
+        public ForceType forceType;
+
+        public Vector3 force;
+        public Vector3 point;
+        public Vector3 normal;
+
+        public Vector3 start;
+        public Vector3 end;
+        
     }
 
     public struct Flee : IComponentData
@@ -96,6 +122,13 @@ namespace ew
         EntityQuery cohesionQuery;
         EntityQuery alignmentQuery;
         EntityQuery constrainQuery;
+        EntityQuery obstacleQuery;
+
+        public Vector3 CamPosition;
+        public Quaternion CamRotation;
+
+        BuildPhysicsWorld physicsWorld;
+        CollisionWorld collisionWorld;
 
         protected override void OnCreate()
         {
@@ -179,8 +212,39 @@ namespace ew
                 }
             });
 
+            obstacleQuery = GetEntityQuery(new EntityQueryDesc()
+            {
+                All = new ComponentType[] {
+                    ComponentType.ReadOnly<ObstacleAvoidance>(),
+                    ComponentType.ReadOnly<Boid>(),
+                    ComponentType.ReadOnly<Translation>(),
+                    ComponentType.ReadOnly<LocalToWorld>()
+                }
+            });
+
+            Enabled = false;
+
+            physicsWorld  = World.GetExistingSystem<Unity.Physics.Systems.BuildPhysicsWorld>();
+            collisionWorld = physicsWorld.PhysicsWorld.CollisionWorld;
+
+            // Register the gizmos callback
+            //MyGizmo.OnDrawGizmos(DrawGizmos);
 
         }
+
+        private void DrawGizmos()
+        {
+            Entities.ForEach((Boid boid, ObstacleAvoidance oa, Translation p, Rotation r) =>
+            {
+                Vector3 position = p.Value;
+                Vector3 forward = math.mul(r.Value, Vector3.forward);
+                Debug.DrawLine(oa.start, oa.end, Color.cyan);
+                Debug.DrawLine(oa.point, oa.point + oa.normal * 10, Color.red);
+            })
+            .Run();
+        }
+
+
 
         protected override void OnDestroy()
         {
@@ -193,6 +257,9 @@ namespace ew
 
         protected override void OnUpdate()
         {
+
+            physicsWorld  = World.GetExistingSystem<Unity.Physics.Systems.BuildPhysicsWorld>();
+            
             BoidBootstrap bootstrap = this.bootstrap;
 
             ComponentTypeHandle<Wander> wTHandle = GetComponentTypeHandle<Wander>();
@@ -203,10 +270,17 @@ namespace ew
             ComponentTypeHandle<Cohesion> cTHandle = GetComponentTypeHandle<Cohesion>();
             ComponentTypeHandle<Alignment> aTHandle = GetComponentTypeHandle<Alignment>();
             ComponentTypeHandle<Constrain> conTHandle = GetComponentTypeHandle<Constrain>();
-
+            ComponentTypeHandle<LocalToWorld> ltwTHandle = GetComponentTypeHandle<LocalToWorld>();
+            ComponentTypeHandle<ObstacleAvoidance> oaTHandle = GetComponentTypeHandle<ObstacleAvoidance>();
+            
             float deltaTime = Time.DeltaTime * bootstrap.speed;
 
             Unity.Mathematics.Random random = new Unity.Mathematics.Random((uint)UnityEngine.Random.Range(1, 100000));
+
+            CamPosition = positions[0];
+            CamRotation = rotations[0];
+
+            //DrawGizmos();
 
             // Copy entities to the native arrays             
             var copyToNativeJob = new CopyTransformsToNativeJob()
@@ -220,7 +294,21 @@ namespace ew
 
             var copyToNativeHandle = copyToNativeJob.ScheduleParallel(translationsRotationsQuery, 1, Dependency);
             Dependency = JobHandle.CombineDependencies(Dependency, copyToNativeHandle);
+            
+            var oaJob = new ObstacleAvoidanceJob()
+            {
+                boidTypeHandle = bTHandle,
+                translationTypeHandle = ttTHandle,
+                ltwTypeHandle = ltwTHandle,
+                obstacleAvoidanceTypeHandle = oaTHandle,
+                rotationTypeHandle = rTHandle,
+                collisionWorld = physicsWorld.PhysicsWorld.CollisionWorld
 
+            };
+
+            var oaJobHandle = oaJob.ScheduleParallel(obstacleQuery, 1, Dependency);
+            Dependency = JobHandle.CombineDependencies(Dependency, oaJobHandle);
+            
             if (bootstrap.usePartitioning)
             {
                 cells.Clear();
@@ -340,7 +428,8 @@ namespace ew
                 rotationTypeHandle = rTHandle,
                 cohesionTypeHandle = cTHandle,
                 alignmentTypeHandle = aTHandle,
-                constrainTypeHandle = conTHandle
+                constrainTypeHandle = conTHandle,
+                obstacleTypeHandle = oaTHandle
             };
 
             var boidJobHandle = boidJob.ScheduleParallel(boidQuery, 1, Dependency);
@@ -357,7 +446,7 @@ namespace ew
 
             var copyFromNativeHandle = copyFromNativeJob.ScheduleParallel(translationsRotationsQuery, 1, Dependency);
 
-            Dependency = JobHandle.CombineDependencies(Dependency, copyFromNativeHandle);
+            Dependency = JobHandle.CombineDependencies(Dependency, copyFromNativeHandle);            
 
             return;
         }
@@ -487,12 +576,21 @@ namespace ew
         [ReadOnly] public ComponentTypeHandle<Constrain> constrainTypeHandle;
         [ReadOnly] public ComponentTypeHandle<Translation> translationTypeHandle;
         [ReadOnly] public ComponentTypeHandle<Rotation> rotationTypeHandle;
+        [ReadOnly] public ComponentTypeHandle<ObstacleAvoidance> obstacleTypeHandle;
         public ComponentTypeHandle<Boid> boidTypeHandle;
 
 
-        private Vector3 AccululateForces(ref Boid b, ref Seperation s, ref Alignment a, ref Cohesion c, ref Wander w, ref Constrain con)
+        private Vector3 AccululateForces(ref Boid b, ref ObstacleAvoidance oa, ref Seperation s, ref Alignment a, ref Cohesion c, ref Wander w, ref Constrain con)
         {
             Vector3 force = Vector3.zero;
+
+
+            force += oa.force;
+            if (force.magnitude >= b.maxForce)
+            {
+                force = Vector3.ClampMagnitude(force, b.maxForce);
+                return force;
+            }
 
             force += b.fleeForce;
             if (force.magnitude >= b.maxForce)
@@ -556,6 +654,7 @@ namespace ew
             var cohesionChunk = batchInChunk.GetNativeArray(cohesionTypeHandle);
             var alignmentChunk = batchInChunk.GetNativeArray(alignmentTypeHandle);
             var constrainChunk = batchInChunk.GetNativeArray(constrainTypeHandle);
+            var oaChunk = batchInChunk.GetNativeArray(obstacleTypeHandle);
 
             for (int i = 0; i < batchInChunk.Count; i++)
             {
@@ -568,8 +667,9 @@ namespace ew
                 Cohesion c = cohesionChunk[i];
                 Alignment a = alignmentChunk[i];
                 Constrain con = constrainChunk[i];
+                ObstacleAvoidance oa = oaChunk[i];
 
-                b.force = AccululateForces(ref b, ref s, ref a, ref c, ref w, ref con) * b.weight;
+                b.force = AccululateForces(ref b, ref oa, ref s, ref a, ref c, ref w, ref con) * b.weight;
 
                 b.force = Vector3.ClampMagnitude(b.force, b.maxForce);
                 Vector3 newAcceleration = (b.force * b.weight) * (1.0f / b.mass);
@@ -898,6 +998,70 @@ namespace ew
                 */
                 con.force = force * weight;
                 constrainChunk[i] = con;
+            }
+        }
+    }
+
+    [BurstCompile]
+    struct ObstacleAvoidanceJob:IJobEntityBatch
+    {
+        [ReadOnly] public ComponentTypeHandle<Boid> boidTypeHandle;
+        [ReadOnly] public ComponentTypeHandle<Translation> translationTypeHandle;
+        [ReadOnly] public ComponentTypeHandle<LocalToWorld> ltwTypeHandle;
+        [ReadOnly] public ComponentTypeHandle<Rotation> rotationTypeHandle;
+        public ComponentTypeHandle<ObstacleAvoidance> obstacleAvoidanceTypeHandle;
+        public CollisionWorld collisionWorld;
+
+        public void Execute(ArchetypeChunk batchInChunk, int batchIndex)
+        {
+
+            var boidChunk = batchInChunk.GetNativeArray(boidTypeHandle);
+            var translationsChunk = batchInChunk.GetNativeArray(translationTypeHandle);
+            var ltwChunk = batchInChunk.GetNativeArray(ltwTypeHandle);
+            var obstacleAvoidanceChunk = batchInChunk.GetNativeArray(obstacleAvoidanceTypeHandle);
+            var rotationChunk = batchInChunk.GetNativeArray(rotationTypeHandle);
+
+
+            for (int i = 0; i < batchInChunk.Count; i++)
+            {
+                float3 force = Vector3.zero;
+                Translation p = translationsChunk[i];
+                ObstacleAvoidance oa = obstacleAvoidanceChunk[i];                
+                LocalToWorld ltw = ltwChunk[i];
+                Boid b = boidChunk[i];
+                Rotation r = rotationChunk[i];
+
+                oa.normal = Vector3.zero;
+                oa.point = Vector3.zero;
+
+                float3 forward = math.mul(r.Value, Vector3.forward);
+                forward = math.normalize(forward);
+                var input = new RaycastInput() {
+                    Start = p.Value,
+                    End = p.Value + (forward * oa.forwardFeelerDepth),
+
+                    //Filter = CollisionFilter.Default                 
+                    Filter = new CollisionFilter {
+                        BelongsTo = ~0u,
+                        CollidesWith = ~0u,
+                        GroupIndex = 0
+                    }
+                };
+
+                oa.start = input.Start;
+                oa.end = input.End;
+                                    
+                Unity.Physics.RaycastHit hit;
+                if (collisionWorld.CastRay(input, out hit))
+                {
+                    Debug.Log("Collides");
+                    float dist = math.distance(hit.Position, p.Value);
+                    force += hit.SurfaceNormal * (oa.forwardFeelerDepth / dist);
+                    oa.normal = hit.SurfaceNormal;
+                    oa.point = hit.Position;
+                }
+                oa.force = force;
+                obstacleAvoidanceChunk[i] = oa;       
             }
         }
     }

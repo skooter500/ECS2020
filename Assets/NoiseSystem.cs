@@ -10,6 +10,12 @@ public class NoiseSystem : SystemBase
 {
     float t = 0;
     float scale= 15;
+
+    protected override void OnCreate()
+    {
+        Enabled = false;
+    }
+
     // OnUpdate runs on the main thread.
     protected override void OnUpdate()
     {

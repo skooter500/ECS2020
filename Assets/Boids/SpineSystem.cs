@@ -42,6 +42,11 @@ namespace ew
             Enabled = false;
         }
 
+        protected override void OnStartRunning()
+        {
+            bootstrap = GameObject.FindObjectOfType<BoidBootstrap>();            
+        }
+
         protected override void OnDestroy()
         {
             positions.Dispose();

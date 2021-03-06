@@ -9,135 +9,126 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine.SceneManagement;
+using System;
 
-struct Cell:IComponentData
+struct Cell : IComponentData
 {
     public int cellId;
 }
 
-struct NeedsPosition:IComponentData
+public class TwoDLifeSystem : SystemBase
 {
-
-}
-
-public class LifeSystem : SystemBase
-{
+    public Vector3 center;
     public static string[] rules;
     public string rule;
-    public int size = 20;
+    public int size = 400;
 
     private NativeArray<int> board;
     private NativeArray<int> next;
-    private NativeHashMap<int, Entity> cells;
-    NativeList<Vector3> newEntities;
+    private NativeArray<Entity> entities;
 
     private RenderMesh cubeMesh;
     public Material material;
 
-    EndSimulationEntityCommandBufferSystem ecbSystem;
     EntityArchetype cubeArchetype;
-    EntityArchetype newCubeArchetype;
-
-    Entity cubePrefab;
 
     EntityManager entityManager;
 
-    private void Randomize()
+    EntityQuery cellQuery;
+
+    public float delay = 0.0f;
+
+    internal static readonly AABB OutOfBounds = new AABB
     {
-        for(int slice = 0 ; slice < size ; slice ++)
+        Center = new float3(-1000000, -1000000, -1000000),
+        Extents = new float3(0, 0, 0),
+    };
+
+    internal static readonly float3 PositionOutOfBounds = new float3(-1000000, -1000000, -1000000);
+    public static TwoDLifeSystem Instance;
+
+    public void Randomize()
+    {
+        int halfSize = size / 2;
         {
-            for(int row = 0 ; row < size ; row ++)
+            for (int row = 0; row < size; row++)
             {
-                for(int col = 0 ; col < size ; col ++)
+                for (int col = 0; col <size; col++)
                 {
                     float dice = UnityEngine.Random.Range(0.0f, 1.0f);
                     if (dice > 0.5f)
                     {
-                        Set(slice, row, col, 255);
+                        Set(ref board, size, row, col, 4);
                     }
+                    
                     else
                     {
-                        Set(slice, row, col, 0);
+                        Set(ref board, size, row, col, 0);
                     }
                 }
-            }            
-        }
-    }
-
-    private void Set(int slice, int row, int col, int val)
-    {
-        int cell = LifeJob.ToCell(size, slice, row, col);
-        board[cell] = val;
-        
-        // Do we need an entity created or destroyed
-        if (val == 0)
-        {
-            Entity item;                
-            if (cells.TryGetValue(cell, out item))
-            {
-                entityManager.DestroyEntity(item);
-            }                
-        }
-        else
-        {
-            Entity item;
-            if (!cells.TryGetValue(cell, out item))
-            {
-                Entity e = entityManager.CreateEntity(cubeArchetype);
-                Translation p = new Translation();
-                p.Value = new float3(slice, row, col);
-                entityManager.SetComponentData<Translation>(e, p);
-                entityManager.SetComponentData<Cell>(e, new Cell(){cellId = cell});
-                entityManager.AddSharedComponentData(e, cubeMesh);
-                cells.TryAdd(cell, e);
             }
         }
     }
 
     protected override void OnCreate()
     {
-        board = new NativeArray<int>((int)Mathf.Pow(size, 3), Allocator.Persistent);
-        next = new NativeArray<int>((int)Mathf.Pow(size, 3), Allocator.Persistent);
-        cells = new NativeHashMap<int, Entity>((int)Mathf.Pow(size, 3), Allocator.Persistent);
-
-        newEntities = new NativeList<Vector3>(Allocator.Persistent);
-
-
-        //Enabled = false;
-
-        ecbSystem = World.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>();
+        Debug.Log("On create");
+        Instance = this;
+        board = new NativeArray<int>((int)Mathf.Pow(size, 2), Allocator.Persistent);
+        next = new NativeArray<int>((int)Mathf.Pow(size, 2), Allocator.Persistent);
+        entities = new NativeArray<Entity>((int)Mathf.Pow(size, 2), Allocator.Persistent);
 
         entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
 
-
         CreateArchetype();
 
-        InitialState();
+        Enabled = false;
+    }
+
+    protected override void OnStartRunning()
+    {
+        Debug.Log("On start running");
+    }
+
+    public void DestroyEntities()
+    {
+        entityManager.DestroyEntity(cellQuery);
+    }
+
+    protected override void OnStopRunning()
+    {
+        Debug.Log("On stop running");
+        DestroyEntities();
+    }
+
+    public void CreateEntities()
+    {
+        entityManager.CreateEntity(cubeArchetype, entities);
+
+        cellQuery = GetEntityQuery(new EntityQueryDesc()
+        {
+            All = new ComponentType[] {
+                    ComponentType.ReadOnly<Cell>()
+                }
+        });
+
+        entityManager.AddSharedComponentData(cellQuery, cubeMesh);
     }
 
     private void CreateArchetype()
     {
         cubeArchetype = entityManager.CreateArchetype(
                     typeof(Translation),
+                    typeof(Rotation),
+                    typeof(NonUniformScale),
                     typeof(LocalToWorld),
                     typeof(RenderBounds),
-                    typeof(Cell),
-                    typeof(RenderMesh)
-                    
-        );
+                    typeof(Cell)
 
-        newCubeArchetype = entityManager.CreateArchetype(
-                    typeof(Translation),
-                    typeof(LocalToWorld),
-                    typeof(RenderBounds),
-                    typeof(Cell),
-                    typeof(NeedsPosition),
-                    typeof(RenderMesh)
-                    
         );
 
         Material material = Resources.Load<Material>("LifeMaterial");
-        GameObject c = Resources.Load<GameObject>("Cube 1"); 
+        GameObject c = Resources.Load<GameObject>("Cube 1");
         Mesh mesh = c.GetComponent<MeshFilter>().sharedMesh;
         cubeMesh = new RenderMesh
         {
@@ -146,124 +137,176 @@ public class LifeSystem : SystemBase
         };
     }
 
-    private void InitialState()
+    public void Clear()
     {
-        Randomize();
-        
-        /*for(int col = 0 ; col < size ; col ++)
+        for (int i = 0; i < size * size; i++)
         {
-            Set(0, size / 2, col, 255);
-            Set(0, (size / 2) + 1, col, 255);
+            board[i] = 0;
+        }        
+    }
+
+    public void Cross()
+    {
+        //Randomize();
+        for (int i = 0; i < size; i++)
+        {
+            Set(ref board, size, size / 2, i, 4);
+            Set(ref board, size, i, size / 2, 4);
+            
+            Set(ref board, size, size / 2 + 1, i, 4);
+            Set(ref board, size, i, size / 2 + 1, 4);            
         }
-        */
-        
+
     }
 
     protected override void OnDestroy()
     {
         board.Dispose();
         next.Dispose();
-        cells.Dispose();
-        newEntities.Dispose();
+        entities.Dispose();
     }
 
     float timePassed = 0;
     int generation = 0;
+    public bool populated = false;
+
+    public static int ToCell(int size, int row, int col)
+    {
+        return (row * size) + col;
+    }
+
+    public static int Get(ref NativeArray<int> board, int size, int row, int col)
+    {
+        if (row < 0 || row >= size || col < 0 || col >= size)
+        {
+            return 0;
+        }
+        return (board[ToCell(size, row, col)]);
+    }
+
+    public static void Set(ref NativeArray<int> board, int size, int row, int col, int val)
+    {
+        int cell = ToCell(size, row, col);
+        board[cell] = val;
+    }
+
+    private static int CountNeighbours(ref NativeArray<int> board, int size, int row, int col)
+    {
+        int count = 0;
+
+        for (int r = row - 1; r <= row + 1; r++)
+        {
+            for (int c = col - 1; c <= col + 1; c++)
+            {
+                if (!(r == row && c == col))
+                {
+                    if (Get(ref board, size, r, c) == 4)
+                    {
+                        count++;
+                    }
+                }
+            }
+        }
+
+        return count;
+    }
+
+    public static void SetPosition(int size, int row, int col, Vector3 center, ref Translation p)
+    {
+        int halfSize = size / 2;
+        p.Value.z = center.x - (size / 2);
+        p.Value.y = center.y + row - (size / 2);
+        p.Value.x = center.z + col - (size / 2);
+    }
+
     protected override void OnUpdate()
     {
         timePassed += Time.DeltaTime;
 
-        if (timePassed > 2.0f)
-        {            
-            
-            var ecbpw = ecbSystem.CreateCommandBuffer().AsParallelWriter();               
-            Debug.Log(generation);
-            generation ++;
+        NativeArray<int> board = this.board;
+        NativeArray<int> next = this.next;
+        int size = this.size;
+        Vector3 center = this.center;
+        if (!populated)
+        {
+            Debug.Log("populating!");
+            populated = true;
+            JobHandle popHandle = Entities
+                .WithBurst()
+                .ForEach((int entityInQueryIndex, ref Cell c, ref Translation p, ref NonUniformScale s) =>
+            {
+                int row = entityInQueryIndex / (size);
+                int col = entityInQueryIndex - (row * size);
+                c.cellId = entityInQueryIndex;
+                s.Value = new float3(1,1, 3);
+                if (board[entityInQueryIndex] > 0)
+                {
+                    SetPosition(size, row, col, center, ref p);
+                }
+                else
+                {
+                    p.Value = PositionOutOfBounds;
+                }
+            })
+            .ScheduleParallel(Dependency);
+            Dependency = JobHandle.CombineDependencies(Dependency, popHandle);
+        }
+
+        if (timePassed > delay)
+        {
+            //Debug.Log("Generation: " + generation);
+            generation++;
             timePassed = 0;
-            
-            /*
-            // Create the new cells
-            NativeArray<Entity> newEntitiesCreate = new NativeArray<Entity>(newEntities.Length, Allocator.Temp);
-            Debug.Log("Creating " + newEntitiesCreate.Length + " entities");
-            entityManager.CreateEntity(newCubeArchetype, newEntitiesCreate);     
-            for(int i = 0 ; i < newEntitiesCreate.Length ; i ++)
-            {
-                Entity e = newEntitiesCreate[i];
-                Vector3 pos = newEntities[i];
-                entityManager.SetComponentData<Translation>(e, new Translation{Value = pos});
-                int cellId = LifeJob.ToCell(size, (int)pos.x, (int)pos.y, (int)pos.z);
-                entityManager.SetComponentData<Cell>(e, new Cell{cellId = cellId});
-                entityManager.AddSharedComponentData(e, cubeMesh);
-            } 
-            */      
-            /*
-            NativeArray<Vector3> newEntitiesLocal = newEntities;
-            int size = this.size;
-            var setPositionsHandle = Entities
-                .ForEach((Entity e, int entityInQueryIndex, ref NeedsPosition c, ref Translation p, ref Cell cell) =>
+
+            var lifeHandle = Entities
+                .WithNativeDisableParallelForRestriction(board)
+                .WithBurst()
+                .ForEach((int entityInQueryIndex, ref Cell c, ref Translation p) =>
                 {
-                    ecbpw.RemoveComponent<NeedsPosition>(entityInQueryIndex, e);
-                    Vector3 pos = newEntitiesLocal[entityInQueryIndex];
-                    p.Value = pos;
-                    int cellId = LifeJob.ToCell(size, (int)pos.x, (int)pos.y, (int)pos.z);
-                    ecbpw.SetComponent<Cell>(entityInQueryIndex, e, new Cell{cellId = cellId});
-                })
-                .Schedule(this.Dependency);
-            Dependency = JobHandle.CombineDependencies(Dependency, setPositionsHandle);
-            */
-            
-            // Delete the dead cells                        
-            NativeHashMap<int, Entity> localCells = cells;
-            var deleteHandle = Entities
-                .WithNativeDisableParallelForRestriction(localCells)
-                .ForEach((Entity e, int entityInQueryIndex, ref Cell c) =>
-                {
-                    Entity item;
-                    if (!localCells.TryGetValue(c.cellId, out item))
+                    int row = entityInQueryIndex / (size);
+                    int col = entityInQueryIndex - (row * size);
+                    int count = CountNeighbours(ref board, size, row, col);
+                    int n = Get(ref board, size, row, col);
+                    if (n > 0)
                     {
-                        Debug.Log("Destroying entity: " + c.cellId);
-                        ecbpw.DestroyEntity(entityInQueryIndex, e);
-                    }                
+                        if (count == 2 || count == 3)
+                        {
+
+                            Set(ref next, size, row, col, n);
+                            SetPosition(size, row, col, center, ref p);
+                        }
+                        else
+                        {
+                            Set(ref next, size, row, col, 0);
+                            p.Value = PositionOutOfBounds;
+                        }
+                    }
+                    else
+                    {
+                        if (count == 3)
+                        {
+                            Set(ref next, size, row, col, 4);
+                            SetPosition(size, row, col, center, ref p);
+                        }
+                        else
+                        {
+                            Set(ref next, size, row, col, 0);
+                            p.Value = PositionOutOfBounds;
+                        }
+                    }
                 })
-                .Schedule(this.Dependency);
-            Dependency = JobHandle.CombineDependencies(Dependency, deleteHandle);
-            
-            var lifeJob = new LifeJob()
-            {
-                cubePrefab = this.cubePrefab,
-                cubeArchetype = this.cubeArchetype,
-                newEntities = newEntities,
-                board = this.board,
-                next = this.next,
-                cells = this.cells,
-                size = this.size
-            };
+                .ScheduleParallel(Dependency);
+            Dependency = JobHandle.CombineDependencies(Dependency, lifeHandle);
 
-            var jobHandle = lifeJob.Schedule(size * size * size, 1, Dependency);
-            Dependency = JobHandle.CombineDependencies(Dependency, jobHandle);   
-
-            /*
-            var ceJob = new CreateEntitiesJob()
-            {
-                cubePrefab = cubePrefab,
-                newEntities = newEntities,
-                ecb = ecbpw
-            };
-            var ceHandle = ceJob.Schedule(newEntities.Length, 1, Dependency);
-            Dependency = JobHandle.CombineDependencies(Dependency, ceHandle);   
-            */
-        
             var cnJob = new CopyNextToBoard()
             {
                 next = this.next,
                 board = this.board
             };
 
-            var cnHandle = cnJob.Schedule(size * size * size, 1, Dependency);
-            Dependency = JobHandle.CombineDependencies(Dependency, cnHandle);        
-        
-            ecbSystem.AddJobHandleForProducer(Dependency);
-        }        
+            var cnHandle = cnJob.Schedule(size * size, 1, Dependency);
+            Dependency = JobHandle.CombineDependencies(Dependency, cnHandle);
+        }
     }
 
     [BurstCompile]
@@ -276,154 +319,6 @@ public class LifeSystem : SystemBase
         public void Execute(int i)
         {
             board[i] = next[i];
-        }
-
-    }
-
-    [BurstCompile]
-    struct CreateEntitiesJob: IJobParallelFor
-    {
-        public NativeList<Vector3> newEntities;
-        public EntityCommandBuffer.ParallelWriter ecb;
-        public Entity cubePrefab; 
-
-        public void Execute(int i)
-        {
-            Vector3 pos = newEntities[i];
-            Entity e = ecb.Instantiate(i, cubePrefab);
-            Translation p = new Translation();
-            p.Value = new float3(pos.x, pos.y, pos.z);
-            ecb.SetComponent<Translation>(i, e, p);
-            //ecb.AddSharedComponent(i, e, cubeMesh);
-        }
-
-    }
-
-    //IJobEntityBatchWithIndex
-    //Create entities with native array
-
-    [BurstCompile]
-    struct LifeJob : IJobParallelFor
-    {
-        [NativeDisableParallelForRestriction]
-        public NativeArray<int> board;
-
-        [NativeDisableParallelForRestriction]
-        public NativeArray<int> next;
-
-        [NativeDisableParallelForRestriction]
-        public NativeHashMap<int, Entity> cells;
-
-        [NativeDisableParallelForRestriction]        
-        public NativeList<Vector3> newEntities;
-
-        public Entity cubePrefab; 
-
-        public EntityArchetype cubeArchetype;
-        //public RenderMesh cubeMesh;
-
-        public int size;
-
-        public static int ToCell(int size, int slice, int row, int col)
-        {
-            return (slice * size * size) + (row * size) + col;
-        }
-
-        public int Get(int slice, int row, int col)
-        {
-            if (row < 0 || row >= size || col < 0 || col >= size || slice < 0 || slice >= size)
-            {
-                return 0;
-            }
-            return (board[ToCell(size, slice, row, col)]);
-        }
-
-        public void Set(int slice, int row, int col, int val, int i)
-        {
-            int cell = ToCell(size, slice, row, col);
-            next[cell] = val;
-            
-            // Do we need an entity created or destroyed
-            if (val == 0)
-            {
-                Entity item;                
-                if (cells.TryGetValue(cell, out item))
-                {   
-                    //ecb.DestroyEntity(i, item);
-                    cells.Remove(cell);
-                }                
-            }
-            else
-            {
-                Entity item;
-                if (!cells.TryGetValue(cell, out item))
-                {
-                    newEntities.Add(new Vector3(slice, row, col));
-                    /*
-                    //Entity e = ecb.Instantiate(i, cubePrefab);
-                    Entity e = ecb.CreateEntity(i, cubeArchetype);
-                    Translation p = new Translation();
-                    p.Value = new float3(s, row, col);
-                    ecb.SetComponent<Translation>(i, e, p);
-                    //ecb.AddSharedComponent(i, e, cubeMesh);
-                    cells.TryAdd(cell, e);
-                    */
-                }
-            }
-        }
-
-        private int CountNeighbours(int slice, int row, int col)
-        {
-            int count = 0;
-            
-            for (int s = slice - 1; s <= slice + 1; s++)
-            {
-                for (int r = row - 1; r <= row + 1; r++)
-                {
-                    for (int c = col - 1; c <= col + 1; c++)
-                    {                        
-                        if (! (r == row && c == col && s == slice))
-                        {
-                            if (Get(s, r, c) > 0)
-                            {
-                                count++;
-                            }
-                        }
-                    }
-                }                
-            }
-            return count;
-        }
-
-        public void Execute(int i)
-        {
-            // Classic Conways
-            int slice = (i / (size * size));
-            int row = (i - (slice * size * size)) / (size);
-            int col = (i - (row * size)) - (slice * size * size);
-            //Debug.LogFormat("i: {0} slice {1} row {2} col {3}", i, slice, row, col);
-            int count = CountNeighbours(slice, row, col);    
-
-            if (Get(slice, row, col) > 0)
-            {
-                if (count == 4 || count == 5)
-                {
-                    
-                    Set(slice, row, col, 255, i);
-                }
-                else
-                {
-                    Set(slice, row, col, 0, i);
-                }
-            }
-            else if (count == 5)
-            {
-                Set(slice, row, col, 255, i);
-            }
-            else
-            {
-                Set(slice, row, col, 0, i);
-            }
         }
     }
 }

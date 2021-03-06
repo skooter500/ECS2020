@@ -4,6 +4,16 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/Spirals.unity
+    guid: 272715c1a4368df42bb99edab2e1a7a7
+  - enabled: 1
+    path: Assets/Scenes/Life.unity
+    guid: 22335b97f29f916489e89c5b6e20cc57
+  - enabled: 1
+    path: Assets/Scenes/PureECSScene.unity
+    guid: 5b8b10108766f7d4db03eb3aae000e2d
   m_configObjects:
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 212a165b85801e1419ed8b8e75c8a75f, type: 2}
+    com.unity.xr.openxr.settings4: {fileID: 11400000, guid: 4e804a4f8850a9e4a92471643cd7b298, type: 2}

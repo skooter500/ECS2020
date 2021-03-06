@@ -119,6 +119,12 @@ namespace ew
             bootstrap = GameObject.FindObjectOfType<BoidBootstrap>();
             Enabled = false;
         }
+
+        protected override void OnStartRunning()
+        {
+            bootstrap = GameObject.FindObjectOfType<BoidBootstrap>();            
+        }
+
         protected override void OnUpdate()
         {
             NativeArray<Vector3> positions = SpineSystem.Instance.positions;

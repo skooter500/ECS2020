@@ -12,6 +12,7 @@ public class NoiseSpawner1 : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        /*
         // Create entity prefab from the game object hierarchy once
         var settings = GameObjectConversionSettings.FromWorld(World.DefaultGameObjectInjectionWorld,  new BlobAssetStore());
         var prefab = GameObjectConversionUtility.ConvertGameObjectHierarchy(Prefab, settings);
@@ -34,6 +35,7 @@ public class NoiseSpawner1 : MonoBehaviour
                 }
             }
         }
+        */
 
         
     }
