@@ -2,7 +2,7 @@
 
 [![YouTube](http://img.youtube.com/vi/KNymjRyr27A/0.jpg)](https://www.youtube.com/watch?v=KNymjRyr27A)
 
-[![YouTube](http://img.youtube.com/vi/SmH2r_ChmFY/0.jpg)](https://www.youtube.com/watch?v=SmH2r_ChmFY)
+[![YouTube](http://img.youtube.com/vi/8J7rliGiKw0/0.jpg)](https://www.youtube.com/watch?v=8J7rliGiKw0)
 
 1000 boids implementing the following behaviours:
 - Seperation
