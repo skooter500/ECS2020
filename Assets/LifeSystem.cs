@@ -87,7 +87,7 @@ public class TwoDLifeSystem : SystemBase
 
     protected override void OnStartRunning()
     {
-        Debug.Log("On start running");
+        
     }
 
     public void DestroyEntities()

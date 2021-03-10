@@ -72,7 +72,7 @@ public class FPSController : MonoBehaviour
     void Update()
     {
 
-        //Cursor.lockState = CursorLockMode.Confined;
+        Cursor.lockState = CursorLockMode.Confined;
   
         float mouseX, mouseY;
         float speed = this.speed;
