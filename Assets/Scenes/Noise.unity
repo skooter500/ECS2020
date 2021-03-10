@@ -429,7 +429,7 @@ MonoBehaviour:
   mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   material: {fileID: 2100000, guid: 74dbbe609316e9349a56b7aa14a8cf06, type: 2}
   size: 200
-  noiseScale: 0.05
+  noiseScale: 0.01
   scale: 50
   speed: 20
 --- !u!1 &1429007936
