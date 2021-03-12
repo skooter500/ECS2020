@@ -663,7 +663,7 @@ MonoBehaviour:
   size: 100
   noiseScale: 0.0404
   scale: 30
-  speed: 20
+  speed: 10
 --- !u!1 &1263093178
 GameObject:
   m_ObjectHideFlags: 0
