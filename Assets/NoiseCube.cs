@@ -30,28 +30,24 @@ public class NoiseCube : MonoBehaviour
     public EntityArchetype archetype;
 
     NoiseSystem noiseSystem;
+
+
+
+    public void OnDestroy()
+    {
+        Debug.Log("OnDestroy LifeEnabler");
+        if (World.DefaultGameObjectInjectionWorld != null && World.DefaultGameObjectInjectionWorld.IsCreated)
+        {
+            NoiseSystem.Instance.Enabled = false;
+        }
+    }
     
 
     // Start is called before the first frame update
     void Start()
     {
-        entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
-
-        archetype = entityManager.CreateArchetype(
-            typeof(Translation),
-            typeof(Rotation),
-            typeof(NonUniformScale),
-            typeof(LocalToWorld),
-            typeof(RenderBounds),
-            typeof(NoiseCell)
-        );
-
-        RenderMesh r = new RenderMesh 
-        {
-            mesh = mesh,
-            material = material
-        };
-
+        
+        /*
         int halfSize = size / 2;
 
         float start = Time.realtimeSinceStartup;
@@ -70,8 +66,9 @@ public class NoiseCube : MonoBehaviour
 
         float ellapsed = Time.realtimeSinceStartup - start;
         Debug.Log("Creating " + (size * size) + " entities took " + ellapsed + " seconds");
-
+        */
         NoiseSystem.Instance.Enabled = true;   
+        NoiseSystem.Instance.CreateEntities();
     }
 
     
@@ -102,10 +99,48 @@ class NoiseSystem:SystemBase
         Instance = this;
         noiseCube = GameObject.FindObjectOfType<NoiseCube>();
         Enabled = false;
+
+        entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
+
+        archetype = entityManager.CreateArchetype(
+            typeof(Translation),
+            typeof(Rotation),
+            typeof(NonUniformScale),
+            typeof(LocalToWorld),
+            typeof(RenderBounds),
+            typeof(NoiseCell)
+        );
+
+        cubeMesh = new RenderMesh 
+        {
+            mesh = noiseCube.mesh,
+            material = noiseCube.material
+        };
+
+        noiseQuery = GetEntityQuery(new EntityQueryDesc()
+        {
+            All = new ComponentType[] {
+                    ComponentType.ReadOnly<NoiseCell>()
+                }
+        });
+
+        entities = new NativeArray<Entity>((int)Mathf.Pow(noiseCube.size, 2), Allocator.Persistent);
     }
 
     protected override void OnDestroy()
     {
+        entities.Dispose();
+    }
+
+    public void DestroyEntities()
+    {
+        entityManager.DestroyEntity(noiseQuery);
+    }
+
+    protected override void OnStopRunning()
+    {
+        Debug.Log("On stop running");
+        DestroyEntities();
     }
 
     protected override void OnStartRunning()
@@ -114,11 +149,11 @@ class NoiseSystem:SystemBase
 
     public void CreateEntities()
     {
+        entityManager.CreateEntity(archetype, entities);        
+
+        entityManager.AddSharedComponentData(noiseQuery, cubeMesh);
     }
 
-    protected override void OnStopRunning()
-    {
-    }
 
     protected override void OnUpdate()
     {        

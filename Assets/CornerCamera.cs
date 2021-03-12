@@ -34,7 +34,7 @@ public class CornerCamera : MonoBehaviour
 
         //noiseCube.noiseScale = Mathf.Lerp(noiseCube.noiseScale, targetNoiseScale, Time.deltaTime * 0.1f);
 
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Joystick1Button0))
         {
             target = Quaternion.AngleAxis(90, Vector3.up) * target;
             //height = baseHeight + (Random.Range(-.5f, .5f) * baseHeight);
