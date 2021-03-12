@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Scenes/Noise.unity
+    guid: 39309cc51ab4c5246abfb39d7564fae5
+  - enabled: 1
     path: Assets/Scenes/Spirals.unity
     guid: 272715c1a4368df42bb99edab2e1a7a7
   - enabled: 1

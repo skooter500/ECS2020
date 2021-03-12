@@ -10,7 +10,6 @@ using Unity.Collections;
 
 struct NoiseCell:IComponentData
 {
-    int x;
 }
 
 public class NoiseCube : MonoBehaviour
@@ -22,6 +21,7 @@ public class NoiseCube : MonoBehaviour
 
     public int size = 500;
 
+    [Range(0.02f, 0.07f)]
     public float noiseScale = 0.01f;
     public float scale = 10;
 
@@ -35,9 +35,45 @@ public class NoiseCube : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        NoiseSystem.Instance.Enabled = true;   
+        entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
 
+        archetype = entityManager.CreateArchetype(
+            typeof(Translation),
+            typeof(Rotation),
+            typeof(NonUniformScale),
+            typeof(LocalToWorld),
+            typeof(RenderBounds),
+            typeof(NoiseCell)
+        );
+
+        RenderMesh r = new RenderMesh 
+        {
+            mesh = mesh,
+            material = material
+        };
+
+        int halfSize = size / 2;
+
+        float start = Time.realtimeSinceStartup;
+
+        for(int row = 0 ; row < size ; row ++)
+        {
+            for(int col = 0 ; col < size ; col ++)
+            {
+                Entity e = entityManager.CreateEntity(archetype);
+                entityManager.AddComponentData(e, new Translation{Value = new float3(row - halfSize, 0, col - halfSize)});
+                entityManager.AddComponentData(e, new Rotation{Value = Quaternion.identity});
+                entityManager.AddComponentData(e, new NonUniformScale{Value = new float3(1,1,1)});
+                entityManager.AddSharedComponentData(e, r);
+            }
+        }
+
+        float ellapsed = Time.realtimeSinceStartup - start;
+        Debug.Log("Creating " + (size * size) + " entities took " + ellapsed + " seconds");
+
+        NoiseSystem.Instance.Enabled = true;   
     }
+
     
     // Update is called once per frame
     void Update()
@@ -93,6 +129,24 @@ class NoiseSystem:SystemBase
         float d = offset + this.delta;
         float s = noiseCube.scale;
         delta += Time.DeltaTime * noiseCube.speed;
-    
+
+        JobHandle handle = Entities
+            .WithBurst()
+            .ForEach((int entityInQueryIndex, ref NoiseCell cell, ref Translation p, ref NonUniformScale scale) =>
+            {
+                int row = entityInQueryIndex / (size);
+                int col = entityInQueryIndex - (row * size);            
+                float height = (s * 0.2f) + (s * Perlin.Noise((p.Value.x + d) * noiseScale, 0, (p.Value.z + d) * noiseScale));
+
+                // Should use the new noise functions
+                //float2 noisePoint = new float2((p.Value.x + d) * noiseScale, (p.Value.z + d) * noiseScale);
+                //float height = (s * 0.2f) + (s * noise.snoise(noisePoint));
+                
+
+                p.Value = new float3(row - halfSize, height / 2, col - halfSize);
+                scale.Value = new float3(1, height, 1);
+            })
+        .ScheduleParallel(Dependency);
+        Dependency = JobHandle.CombineDependencies(Dependency, handle);
     }
 }

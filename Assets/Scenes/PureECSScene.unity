@@ -647,7 +647,7 @@ MonoBehaviour:
   size: 17
   cellSize: 50
   gridSize: 10000
-  usePartitioning: 1
+  usePartitioning: 0
   colorSpeed: 50
   colorAdd: 0
   toPass: 0.5

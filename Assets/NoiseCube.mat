@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: NoiseCube
-  m_Shader: {fileID: 4800000, guid: 3b13d4d1d2d9e0a499fb484d2c65c57a, type: 3}
+  m_Shader: {fileID: 4800000, guid: c9568091d91068b429ff38e38b418a00, type: 3}
   m_ShaderKeywords: 
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
