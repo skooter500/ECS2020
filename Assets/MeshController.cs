@@ -12,15 +12,20 @@ using Unity.Burst;
 //[RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class MeshController : MonoBehaviour {
 
-	public int xSize, ySize;
+	public int size = 250;
 
 	public Mesh mesh;
 	public Material material;
 
 	public NativeArray<Vector3> vertices;
 
+	public float noiseScale = 0.0404f;
+	public float yScale = 100;
+	public float xzScale = 100;
+	public float speed = 10;
+
 	private void Awake () {
-		vertices = new NativeArray<Vector3>((xSize + 1) * (ySize + 1), Allocator.Persistent);		
+		vertices = new NativeArray<Vector3>((size + 1) * (size + 1), Allocator.Persistent);		
 		Generate();		
 		MeshDeformationSystem.Instance.CreateEntities();
 		MeshDeformationSystem.Instance.Enabled = true;
@@ -36,25 +41,25 @@ public class MeshController : MonoBehaviour {
 		//GetComponent<MeshFilter>().mesh = mesh; 
 		mesh.name = "Procedural Grid";
 
-		int halfXSize = xSize / 2;
-		int halfYSize = xSize / 2;
+		int halfXSize = size / 2;
+		int halfYSize = size / 2;
 
-		for (int i = 0, y = 0; y <= ySize; y++) {
-			for (int x = 0; x <= xSize; x++, i++) {
+		for (int i = 0, y = 0; y <= size; y++) {
+			for (int x = 0; x <= size; x++, i++) {
 				float h = Mathf.PerlinNoise(((x * 0.1f) + 10000), (y * 0.1f) + 10000) * 5;
-				vertices[i] = transform.TransformPoint(new Vector3(x - halfXSize, 0, y - halfYSize));
+				vertices[i] = transform.TransformPoint(new Vector3((x - halfXSize) * 100, 0, (y - halfYSize) * 100));
 			}
 		}
 		mesh.vertices = vertices.ToArray();
 		//mesh.vertices = vertices;
 
-		int[] triangles = new int[xSize * ySize * 6];
-		for (int ti = 0, vi = 0, y = 0; y < ySize; y++, vi++) {
-			for (int x = 0; x < xSize; x++, ti += 6, vi++) {
+		int[] triangles = new int[size * size * 6];
+		for (int ti = 0, vi = 0, y = 0; y < size; y++, vi++) {
+			for (int x = 0; x < size; x++, ti += 6, vi++) {
 				triangles[ti] = vi;
 				triangles[ti + 3] = triangles[ti + 2] = vi + 1;
-				triangles[ti + 4] = triangles[ti + 1] = vi + xSize + 1;
-				triangles[ti + 5] = vi + xSize + 2;
+				triangles[ti + 4] = triangles[ti + 1] = vi + size + 1;
+				triangles[ti + 5] = vi + size + 2;
 			}
 		}
 		mesh.triangles = triangles;
@@ -111,12 +116,13 @@ public class MeshDeformationSystem : SystemBase
 
     protected override void OnUpdate()
     {
-		delta += (Time.DeltaTime * 10);
+		delta += (Time.DeltaTime * meshController.speed);
         MeshJob meshJob = new MeshJob()
 		{
-			s = 30,
+			s = meshController.yScale,
 			d = delta,
-			noiseScale = 0.0404f,
+			noiseScale = meshController.noiseScale,
+			size = meshController.size,
 			vertices = meshController.vertices
 		};
 
@@ -134,8 +140,12 @@ struct MeshJob : IJobParallelFor
 	public float s;
 	public float d;
 	public float noiseScale;
+	public int size;
     public void Execute(int index)
     {
+		int row = index / (size);
+		int col = index - (row * size);            
+                
 		Vector3 p = vertices[index];
 		float noise = Perlin.Noise((p.x + d) * noiseScale, 0, (p.z + d) * noiseScale);		
 		float height = (s * 0.2f) + (s * noise);

@@ -259,10 +259,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 589fc3064d261406a97550f5fc2d62f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  xSize: 250
-  ySize: 250
+  size: 250
   mesh: {fileID: 0}
   material: {fileID: 2100000, guid: dd7f8fdd3f19884488b0d2ce435ffdac, type: 2}
+  noiseScale: 0.0404
+  yScale: 100
+  xzScale: 100
+  speed: 10
 --- !u!1 &497636784
 GameObject:
   m_ObjectHideFlags: 0
@@ -534,7 +537,7 @@ Camera:
     width: 1
     height: 1
   near clip plane: 0.3
-  far clip plane: 1000
+  far clip plane: 10000
   field of view: 60
   orthographic: 0
   orthographic size: 5
@@ -560,13 +563,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1485596548}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1, z: -10}
+  m_LocalRotation: {x: 0.38268343, y: 0, z: 0, w: 0.92387956}
+  m_LocalPosition: {x: 0, y: 100, z: -250}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 45, y: 0, z: 0}
 --- !u!114 &1485596552
 MonoBehaviour:
   m_ObjectHideFlags: 0
