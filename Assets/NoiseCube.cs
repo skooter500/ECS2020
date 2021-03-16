@@ -175,7 +175,6 @@ class NoiseSystem:SystemBase
                 //float2 noisePoint = new float2((p.Value.x + d) * noiseScale, (p.Value.z + d) * noiseScale);
                 //float height = (s * 0.2f) + (s * noise.snoise(noisePoint));
                 
-
                 p.Value = new float3(row - halfSize, height / 2, col - halfSize);
                 scale.Value = new float3(1, height, 1);
             })
