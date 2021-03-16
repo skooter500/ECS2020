@@ -4,7 +4,7 @@ using System.Collections;
 // Adapted from https://catlikecoding.com/unity/tutorials/procedural-grid/
 
 //[RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
-public class Grid : MonoBehaviour {
+public class MeshController : MonoBehaviour {
 
 	public int xSize, ySize;
 
