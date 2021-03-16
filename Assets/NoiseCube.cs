@@ -32,12 +32,12 @@ public class NoiseCube : MonoBehaviour
     NoiseSystem noiseSystem;
 
 
-
     public void OnDestroy()
     {
         Debug.Log("OnDestroy LifeEnabler");
         if (World.DefaultGameObjectInjectionWorld != null && World.DefaultGameObjectInjectionWorld.IsCreated)
         {
+            NoiseSystem.Instance.DestroyEntities();
             NoiseSystem.Instance.Enabled = false;
         }
     }
@@ -110,26 +110,10 @@ class NoiseSystem:SystemBase
             typeof(RenderBounds),
             typeof(NoiseCell)
         );
-
-        cubeMesh = new RenderMesh 
-        {
-            mesh = noiseCube.mesh,
-            material = noiseCube.material
-        };
-
-        noiseQuery = GetEntityQuery(new EntityQueryDesc()
-        {
-            All = new ComponentType[] {
-                    ComponentType.ReadOnly<NoiseCell>()
-                }
-        });
-
-        entities = new NativeArray<Entity>((int)Mathf.Pow(noiseCube.size, 2), Allocator.Persistent);
     }
 
     protected override void OnDestroy()
     {
-        entities.Dispose();
     }
 
     public void DestroyEntities()
@@ -149,8 +133,22 @@ class NoiseSystem:SystemBase
 
     public void CreateEntities()
     {
-        entityManager.CreateEntity(archetype, entities);        
+        cubeMesh = new RenderMesh 
+        {
+            mesh = noiseCube.mesh,
+            material = noiseCube.material
+        };
 
+        noiseQuery = GetEntityQuery(new EntityQueryDesc()
+        {
+            All = new ComponentType[] {
+                    ComponentType.ReadOnly<NoiseCell>()
+                }
+        });
+
+        entities = new NativeArray<Entity>((int)Mathf.Pow(noiseCube.size, 2), Allocator.Persistent);
+
+        entityManager.CreateEntity(archetype, entities);        
         entityManager.AddSharedComponentData(noiseQuery, cubeMesh);
     }
 
