@@ -97,11 +97,10 @@ class NoiseSystem:SystemBase
     protected override void OnCreate()
     {
         Instance = this;
-        noiseCube = GameObject.FindObjectOfType<NoiseCube>();
         Enabled = false;
 
         entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
-
+        
         archetype = entityManager.CreateArchetype(
             typeof(Translation),
             typeof(Rotation),
@@ -133,6 +132,8 @@ class NoiseSystem:SystemBase
 
     public void CreateEntities()
     {
+        
+        noiseCube = GameObject.FindObjectOfType<NoiseCube>();        
         cubeMesh = new RenderMesh 
         {
             mesh = noiseCube.mesh,

@@ -21,7 +21,6 @@ public class MeshController : MonoBehaviour {
 
 	public float noiseScale = 0.0404f;
 	public float yScale = 100;
-	public float xzScale = 100;
 	public float speed = 10;
 
 	private void Awake () {
@@ -47,7 +46,7 @@ public class MeshController : MonoBehaviour {
 		for (int i = 0, y = 0; y <= size; y++) {
 			for (int x = 0; x <= size; x++, i++) {
 				float h = Mathf.PerlinNoise(((x * 0.1f) + 10000), (y * 0.1f) + 10000) * 5;
-				vertices[i] = transform.TransformPoint(new Vector3((x - halfXSize) * 100, 0, (y - halfYSize) * 100));
+				vertices[i] = transform.TransformPoint(new Vector3((x - halfXSize), 0, (y - halfYSize)));
 			}
 		}
 		mesh.vertices = vertices.ToArray();

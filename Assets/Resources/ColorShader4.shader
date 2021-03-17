@@ -71,14 +71,14 @@ Shader "Custom/ColorShader4"
 			fixed3 c = hsv_to_rgb(float3(hue, 1, 1));
             */
             float dist = sqrt(pow(IN.worldPos.x,2) + pow(IN.worldPos.z, 2));
-			float hue = abs(((dist / 2500.0f - _Time)))  % 1.0;
+			float hue = abs(((dist / 500.0f - _Time)))  % 1.0;
 			fixed3 c = hsv_to_rgb(float3(hue, 1, 1));
 
 			o.Albedo = c.rgb;
 			// Metallic and smoothness come from slider variables
             o.Metallic = _Metallic;
             o.Smoothness = _Glossiness;
-            o.Alpha = 0.4;
+            o.Alpha = 0.2;
         }
         ENDCG
     }
