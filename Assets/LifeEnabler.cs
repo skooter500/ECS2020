@@ -28,6 +28,12 @@ public class LifeEnabler : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            LifeSystem.Instance.Clear();
+            LifeSystem.Instance.InitialState();
+            LifeSystem.Instance.populated = false;
+        }
         
     }
 }

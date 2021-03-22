@@ -21,7 +21,7 @@ public class LifeSystem : SystemBase
     public Vector3 center;
     public static string[] rules;
     public string rule;
-    public int size = 70;
+    public int size = 200;
 
     private NativeArray<int> board;
     private NativeArray<int> next;
@@ -44,6 +44,14 @@ public class LifeSystem : SystemBase
 
     internal static readonly float3 PositionOutOfBounds = new float3(-1000000, -1000000, -1000000);
     public static LifeSystem Instance;
+
+    public void Clear()
+    {
+        for(int i = 0 ; i < board.Length ; i ++)
+        {
+            board[i] = 0;
+        }
+    }
 
     private void Randomize()
     {
@@ -161,7 +169,7 @@ public class LifeSystem : SystemBase
 
     float timePassed = 0;
     int generation = 0;
-    bool populated = false;
+    public bool populated = false;
 
     public static int ToCell(int size, int slice, int row, int col)
     {
