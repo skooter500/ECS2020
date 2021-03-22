@@ -38,12 +38,6 @@ public class TwoDLifeSystem : SystemBase
 
     public float delay = 0.0f;
 
-    internal static readonly AABB OutOfBounds = new AABB
-    {
-        Center = new float3(-1000000, -1000000, -1000000),
-        Extents = new float3(0, 0, 0),
-    };
-
     internal static readonly float3 PositionOutOfBounds = new float3(-1000000, -1000000, -1000000);
     public static TwoDLifeSystem Instance;
 

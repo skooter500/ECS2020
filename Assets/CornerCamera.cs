@@ -18,6 +18,7 @@ public class CornerCamera : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        Cursor.visible = false;
         float corner  = (noiseCube.size / 2) + 0;
         height = baseHeight;
         target = new Vector3(corner, height, corner);
