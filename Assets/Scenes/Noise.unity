@@ -675,10 +675,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   material: {fileID: 2100000, guid: 74dbbe609316e9349a56b7aa14a8cf06, type: 2}
-  size: 100
+  size: 200
   noiseScale: 0.0404
   scale: 30
-  speed: 10
+  speed: 5
 --- !u!1 &1263093178
 GameObject:
   m_ObjectHideFlags: 0

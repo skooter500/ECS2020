@@ -137,7 +137,7 @@ class NoiseSystem:SystemBase
         cubeMesh = new RenderMesh 
         {
             mesh = noiseCube.mesh,
-            material = noiseCube.material
+            material = noiseCube.material,
         };
 
         noiseQuery = GetEntityQuery(new EntityQueryDesc()
