@@ -8,7 +8,7 @@ public class ParticleController : MonoBehaviour
 
     float delay = 1.0f;
     [Range(0,1000)]
-    public float turnFraction = 1.618034f;
+    public float points = 1.618034f;
     [Range(0,5)]
     public float radius = 0.038f;
 
@@ -66,14 +66,14 @@ public class ParticleController : MonoBehaviour
         switch(which)
         {
             case 0:
-                turnFraction = Random.Range(1, 20);        
+                points = Random.Range(1, 20);        
                 break;
             case 1:
-                turnFraction = Random.Range(1, 20);              
+                points = Random.Range(1, 20);              
                 break;
             case 2:
                 radius = Random.Range(0.5f, 5f);     
-                turnFraction = Random.Range(1, 20);      
+                points = Random.Range(1, 20);      
                 break;
             case 3:
                 target.z = distances[Random.Range(0, distances.Length)] ;
@@ -102,7 +102,7 @@ public class ParticleController : MonoBehaviour
         //camera.position = Vector3.Lerp(camera.position, target, Time.deltaTime);
         if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Joystick1Button0))
         {
-            turnFraction = Random.Range(1, 50);            
+            points = Random.Range(1, 50);            
         
         }
         if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Joystick1Button2))
@@ -155,11 +155,11 @@ public class ParticleController : MonoBehaviour
         
         if (Input.GetAxis("Horizontal") > 0)
         {
-            turnFraction += Time.deltaTime * turnSpeed;
+            points += Time.deltaTime * turnSpeed;
         }
         if (Input.GetAxis("Horizontal") < 0)
         {
-            turnFraction -= Time.deltaTime * turnSpeed;
+            points -= Time.deltaTime * turnSpeed;
         }
 
         if (Input.GetAxis("Vertical") > 0)

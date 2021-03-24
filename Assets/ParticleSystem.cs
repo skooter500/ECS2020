@@ -11,10 +11,7 @@ using UnityEngine;
 
 public struct Particle:IComponentData
 {
-    public float3 targetPos;
-    public float3 targetPos1;
-    public float3 lerpedTargetPos;
-    public float3 lerpedTargetPos1;
+    public float3 position;
 }
 
 public class ParticleSystem : SystemBase
@@ -105,19 +102,19 @@ public class ParticleSystem : SystemBase
 
     protected override void OnUpdate()
     {
-        float turnFraction = controller.turnFraction;
+        float points = controller.points;
         float radius = controller.radius;
-        float inc = (math.PI * 2.0f) / turnFraction;
+        float inc = (math.PI * 2.0f) / points;
         float timeDelta = Time.DeltaTime;
         float speed = controller.speed;
         float spacer = controller.spacer == 0 ? 1 : controller.spacer;
         int direction = controller.direction;
-        NativeArray<float3> targetPositions = this.targetPositions;
+        NativeArray<float3> positions = this.targetPositions;
         float thickness = controller.thickness;
         bool open = controller.open;
         int size = this.size;
         var jobHandle = Entities
-            .WithNativeDisableParallelForRestriction(targetPositions)
+            .WithNativeDisableParallelForRestriction(positions)
             .ForEach((int entityInQueryIndex, ref Particle p, ref Translation t, ref NonUniformScale s, ref Rotation r) =>
         {
             float angle = entityInQueryIndex * inc;
@@ -169,29 +166,26 @@ public class ParticleSystem : SystemBase
                     break;
 
             } 
-            p.lerpedTargetPos = math.lerp(p.lerpedTargetPos, target, timeDelta * speed);
-            targetPositions[entityInQueryIndex] = p.lerpedTargetPos;
+            p.position = math.lerp(p.position, target, timeDelta * speed);
+            positions[entityInQueryIndex] = p.position;
             
             float3 previous;
-            if (entityInQueryIndex > turnFraction)
+            if (entityInQueryIndex > points)
             {
-                previous = targetPositions[entityInQueryIndex - (int) turnFraction - 1];
+                previous = positions[entityInQueryIndex - (int) points - 1];
             }
             else
             {
                 previous = Vector3.zero;
             }
 
-            float3 toTarget1 = p.lerpedTargetPos - previous;
+            float3 toTarget1 = p.position - previous;
             float3 cent = previous + ((toTarget1) / 2.0f);
 
             s.Value = new float3(thickness, thickness, math.length(toTarget1));
             
-            //Quaternion q = Quaternion.AngleAxis(math.atan2(toTarget1.y, toTarget1.x) * Mathf.Rad2Deg, Vector3.forward);
             Quaternion q = Quaternion.LookRotation(toTarget1);
             r.Value = q;
-
-
             t.Value = cent;
         })
         .ScheduleParallel(Dependency);
