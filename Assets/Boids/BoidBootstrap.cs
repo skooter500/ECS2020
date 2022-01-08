@@ -15,6 +15,10 @@ namespace ew
     public class BoidBootstrap : MonoBehaviour
     {
 
+        public GameObject headPrefab;
+        public GameObject bodyPrefab;
+
+
         public static int MAX_BOIDS = 25000;
         public static int MAX_SPINES = 50;
         public static int MAX_NEIGHBOURS = 150;
@@ -27,7 +31,10 @@ namespace ew
         private EntityManager entityManager;
 
         private RenderMesh bodyMesh;
+
+        private RenderMesh dodRenderMesh;
         public Mesh mesh;
+        public Mesh dodMesh;
         public Material material;
 
         public float seperationWeight = 1.0f;
@@ -284,6 +291,84 @@ namespace ew
 
         }
 
+        void CreateBird(Vector3 pos, Quaternion q, int boidId)
+        {
+            BGE.Forms.CreatureGenerator cg = new BGE.Forms.CreatureGenerator();
+            cg.headPrefab = headPrefab;
+            cg.bodyPrefab = bodyPrefab;
+            cg.scaleFins = true;
+            cg.theta = 2.3f;
+            cg.frequency = 2.0f;
+            cg.numParts = 5;
+            cg.gap = 0.7f;
+            cg.verticalSize = 200;
+            cg.finList = "";
+            //cg.transform = this.transform;
+            cg.CreateCreature();
+
+
+            /*
+            Entity boidEntity = entityManager.CreateEntity(boidArchitype);
+            allTheBoids[boidId] = boidEntity;
+            Translation p = new Translation
+            {
+                Value = pos
+            };
+
+            Rotation r = new Rotation
+            {
+                Value = q
+            };
+
+            entityManager.SetComponentData(boidEntity, p);
+            entityManager.SetComponentData(boidEntity, r);
+
+            NonUniformScale s = new NonUniformScale
+            {
+                Value = new Vector3(size * 0.3f, size, size)
+            };
+
+            entityManager.SetComponentData(boidEntity, s);
+
+            entityManager.SetComponentData(boidEntity, new Boid() { boidId = boidId, mass = 1, maxSpeed = 100 * UnityEngine.Random.Range(0.9f, 1.1f), maxForce = 400, weight = 200 });
+            entityManager.SetComponentData(boidEntity, new Harmonic()
+            {
+                distance = 2
+                ,
+                radius = 1.2f,
+                amplitude = 80,
+                frequency = 1
+            });                        
+            entityManager.SetComponentData(boidEntity, new Spine() { parent = -1, spineId = (spineLength + 1) * boidId });
+
+            entityManager.AddSharedComponentData(boidEntity, bodyMesh);
+
+            for (int i = 0; i < spineLength; i++)
+            {
+                int parentId = (boidId * (spineLength + 1)) + i;
+                Translation sp = new Translation
+                {
+                    Value = pos - (q * Vector3.forward) * size * (float)(i + 1)
+                };
+                Entity spineEntity = entityManager.CreateEntity(spineArchitype);
+                int spineIndex = (boidId * spineLength) + i;
+                allTheSpines[spineIndex] = spineEntity;
+
+                entityManager.SetComponentData(spineEntity, sp);
+                entityManager.SetComponentData(spineEntity, r);
+                entityManager.SetComponentData(spineEntity, new Spine() { parent = parentId, spineId = parentId + 1, offset = new Vector3(0, 0, -size) });
+                entityManager.AddSharedComponentData(spineEntity, bodyMesh);
+                s = new NonUniformScale
+                {
+                    Value = new Vector3(0.01f, Map(i, 0, spineLength, size, 0.01f * size), size)
+                };
+                //s.Value = new Vector3(2, 4, 10);
+                entityManager.SetComponentData(spineEntity, s);
+
+            }
+            */
+        }
+
 
         Entity CreateBoidWithTrail(Vector3 pos, Quaternion q, int boidId, float size)
         {
@@ -473,7 +558,17 @@ namespace ew
                 mesh = mesh,
                 material = material
             };
-            StartCoroutine(CreateBoids());
+
+            dodRenderMesh = new RenderMesh
+            {
+                mesh = dodMesh,
+                material = material
+            };
+
+
+            CreateBird(this.transform.position, this.transform.rotation, 0);
+
+            //StartCoroutine(CreateBoids());
             
             Cursor.visible = false;
 

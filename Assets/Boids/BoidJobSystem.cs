@@ -27,6 +27,25 @@ namespace ew
 
         public Vector3 fleeForce; // Have to put this here because there is a limit to the number of components in IJobProcessComponentData
         public Vector3 seekForce; // Have to put this here because there is a limit to the number of components in IJobProcessComponentData
+        public Vector3 harmonicForce; // Have to put this here because there is a limit to the number of components in IJobProcessComponentData
+    }
+
+    public struct Harmonic:IComponentData
+    {
+        public float radius;
+        public float distance;
+        public float frequency;
+        public float amplitude;
+    }
+
+    public struct FinAnimator:IComponentData
+    {
+        public int boidId;
+    }
+
+    public struct TailAnimator:IComponentData
+    {
+        public int boidId;
     }
 
     public struct ObstacleAvoidance:IComponentData
