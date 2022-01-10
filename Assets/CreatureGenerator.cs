@@ -1,6 +1,12 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System;
+using Unity.Entities;
+using Unity.Collections;
+using Unity.Transforms;
+using Unity.Mathematics;
+using ew;
+using Unity.Rendering;
 
 namespace BGE.Forms
 {
@@ -37,8 +43,16 @@ namespace BGE.Forms
 
         public bool flatten = false;
 
-        public GameObject headPrefab;
-        public GameObject bodyPrefab;
+        public Mesh mesh;
+
+        public EntityArchetype headArchitype;
+        public EntityArchetype bodyArchitype;
+
+        public EntityArchetype tailArchitype;
+
+        public RenderMesh dodRenderMesh;
+        
+
         public GameObject tailPrefab;
         public GameObject leftFinPrefab;
         public GameObject rightFinPrefab;
@@ -50,9 +64,11 @@ namespace BGE.Forms
 
         public float lengthVariation = 0;
 
-        Dictionary<string, GameObject> bodyParts = new Dictionary<string, GameObject>();
+        Dictionary<string, Entity> bodyParts = new Dictionary<string, Entity>();
 
-        GameObject GetCreaturePart(string key, GameObject prefab)
+        public int spineLength;
+
+        Entity GetCreaturePart(string key, EntityArchetype archetype)
         {
             if (bodyParts.ContainsKey(key))
             {
@@ -60,7 +76,10 @@ namespace BGE.Forms
             }
             else
             {
-                GameObject part = GameObject.Instantiate<GameObject>(prefab);
+                Entity part = entityManager.CreateEntity(archetype);
+                
+                //GameObject part = GameObject.Instantiate<GameObject>(prefab);
+
                 //if (!part.GetComponent<Renderer>().material.name.Contains("Trans"))
                 //{
                 //    part.GetComponent<Renderer>().material.color = Color.black;
@@ -93,47 +112,65 @@ namespace BGE.Forms
             }
         }
 
-        public void CreateCreature()
+        EntityManager entityManager;
+        NativeArray<Entity> allTheBoids;
+        NativeArray<Entity> allTheSpines;
+
+        public void CreateCreature(int boidId, ref EntityManager entityManager, ref NativeArray<Entity> allTheBoids, ref NativeArray<Entity> allTheSpines)
         {
+            this.entityManager = entityManager;
+            this.allTheBoids = allTheBoids;
+            this.allTheSpines = allTheSpines;
             string[] fla = finList.Split(',');
             List<CreaturePart> creatureParts = CreateCreatureParams();
             Gizmos.color = Color.yellow;
-            int  boidId = 0;
 
             int finNumber = 0;
             for (int i = 0; i < creatureParts.Count; i ++)
             {
                 CreaturePart cp = creatureParts[i];
-                GameObject part = GetCreaturePart("body part " + i, cp.prefab);
-                part.transform.position = cp.position;
-                if (i != 0)
+                Entity part = GetCreaturePart("body part " + i, cp.archetype);
+
+                Translation p = new Translation
                 {
-                    part.transform.Translate(0, 0, partOffset);
-                }
+                    Value = cp.position + ((i != 0) ? new Vector3(0, 0, partOffset) : Vector3.zero)
+                };
             
                 if (i == 0)
                 {
+                    allTheBoids[boidId] = part;
+                    entityManager.SetComponentData(part, new Spine() { parent = -1, spineId = (spineLength + 1) * boidId });
                     //boid = part.GetComponent<Boid>();
-                    //part.transform.parent = transform;
                 }
                 else
                 {
-                    if (parentSegmentsTo != null)
-                    {
-                        part.transform.parent = parentSegmentsTo;
-                    }
-                    else
-                    {
-                        //part.transform.parent = transform;
-                    }
+                    int parentId = (boidId * (spineLength + 1)) + i;                
+                    int spineIndex = (boidId * spineLength) + i;
+                    allTheSpines[spineIndex] = part;
+
+                    entityManager.SetComponentData(part, new Spine() { parent = parentId, spineId = parentId + 1, offset = new Vector3(0, 0, -cp.size) });
+                    
                 }
 
-                //Utilities.SetUpAnimators(part, boid);
-            
-                part.transform.localScale = new Vector3(cp.size * part.transform.localScale.x, cp.size * part.transform.localScale.y, cp.size * part.transform.localScale.z);
-                part.transform.rotation = Quaternion.identity;;
+                Rotation r = new Rotation
+                {
+                    Value = Quaternion.identity
+                };
+
+                entityManager.SetComponentData(part, p);
+                entityManager.SetComponentData(part, r);
+
+                NonUniformScale s = new NonUniformScale
+                {
+                    Value = new Vector3(cp.size, cp.size, cp.size)
+                };
+
+                entityManager.SetComponentData(part, s);
+
+                entityManager.AddSharedComponentData(part, dodRenderMesh);
 
                 
+                /*
                 // Make fins if required            
                 if (System.Array.Find(fla, p => p == "" + i) != null)
                 {
@@ -142,6 +179,7 @@ namespace BGE.Forms
                     //GameObject rightFin = GenerateFin(scale, cp, boid, (finNumber * finRotationOffset), part, FinAnimator.Side.right, finNumber);
                     finNumber++;
                 }
+                */
             }
         }
 
@@ -152,11 +190,11 @@ namespace BGE.Forms
             switch (side)
             {
                 case FinAnimator.Side.left:
-                    fin = GetCreaturePart("left fin" + finNumber, leftFinPrefab);
+                    //fin = GetCreaturePart("left fin" + finNumber, leftFinPrefab);
                     pos -= (transform.right * cp.size / 2);                
                     break;
                 case FinAnimator.Side.right:
-                    fin = GetCreaturePart("right fin" + finNumber, rightFinPrefab);
+                    //fin = GetCreaturePart("right fin" + finNumber, rightFinPrefab);
                     pos += (transform.right * cp.size / 2);
                     break;
             }
@@ -207,32 +245,26 @@ namespace BGE.Forms
                 lastPartSize = partSize;
                 if (i == seatPosition && seatPrefab != null)
                 {
+                    /*
                     cps.Add(new CreaturePart(pos
                         , partSize
                         , CreaturePart.Part.seat
                         , seatPrefab
                         , Quaternion.identity));
+                        */
                 }
                 else
                 {
                     cps.Add(new CreaturePart(pos
                         , partSize
                         , (i == 0) ? CreaturePart.Part.head : (i < numParts - 1) ? CreaturePart.Part.body : CreaturePart.Part.tail
-                        , (i == 0) ? headPrefab : (i < numParts - 1) ? bodyPrefab : (tailPrefab != null) ? tailPrefab : bodyPrefab
+                        , (i == 0) ? headArchitype : (i < numParts - 1) ? bodyArchitype : (tailPrefab != null) ? tailArchitype : bodyArchitype
                         , Quaternion.identity));
 
                 }
 
             }
             return cps;
-        }
-
-        // Use this for initialization
-        void Awake() {
-            // For some reason this method is being called twice
-            if (transform.childCount == 0)
-            {   CreateCreature();
-            }            
         }
 
         void Start()
@@ -257,14 +289,14 @@ namespace BGE.Forms
         public float size;
         public enum Part { head, body, fin , tail, tenticle, seat};
         public Part part;
-        public GameObject prefab;
+        public EntityArchetype archetype;
     
-        public CreaturePart(Vector3 position, float scale, Part part, GameObject prefab, Quaternion rotation)
+        public CreaturePart(Vector3 position, float scale, Part part, EntityArchetype archetype, Quaternion rotation)
         {
             this.position = position;
             this.size = scale;
             this.part = part;
-            this.prefab = prefab;
+            this.archetype = archetype;
             this.rotation = rotation;
         }
 

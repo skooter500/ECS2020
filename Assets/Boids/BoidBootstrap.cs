@@ -294,8 +294,7 @@ namespace ew
         void CreateBird(Vector3 pos, Quaternion q, int boidId)
         {
             BGE.Forms.CreatureGenerator cg = new BGE.Forms.CreatureGenerator();
-            cg.headPrefab = headPrefab;
-            cg.bodyPrefab = bodyPrefab;
+            cg.mesh = dodMesh;
             cg.scaleFins = true;
             cg.theta = 2.3f;
             cg.frequency = 2.0f;
@@ -303,8 +302,12 @@ namespace ew
             cg.gap = 0.7f;
             cg.verticalSize = 200;
             cg.finList = "";
+            cg.spineLength = spineLength;
             //cg.transform = this.transform;
-            cg.CreateCreature();
+            cg.dodRenderMesh = dodRenderMesh;
+            cg.headArchitype = boidArchitype;
+            cg.bodyArchitype = boidArchitype;
+            cg.CreateCreature(boidId, ref entityManager, ref allTheBoids, ref allTheSpines);
 
 
             /*
