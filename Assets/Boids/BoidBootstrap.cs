@@ -24,7 +24,8 @@ namespace ew
         public static int MAX_NEIGHBOURS = 150;
 
         private EntityArchetype boidArchitype;
-        private EntityArchetype dodArchitype;
+        private EntityArchetype birdHeadArchitype;
+        private EntityArchetype birdBodyArchitype;
         private EntityArchetype headArchitype;
         private EntityArchetype tailArchitype;
         private EntityArchetype spineArchitype;
@@ -294,6 +295,11 @@ namespace ew
 
         void CreateBird(Vector3 pos, Quaternion q, int boidId)
         {
+
+            BoidJobSystem.Instance.Enabled = true;
+            SpineSystem.Instance.Enabled = true;
+            HeadsAndTailsSystem.Instance.Enabled = true;
+
             BGE.Forms.CreatureGenerator cg = new BGE.Forms.CreatureGenerator();
             cg.mesh = dodMesh;
             cg.scaleFins = true;
@@ -306,8 +312,8 @@ namespace ew
             cg.spineLength = spineLength;
             //cg.transform = this.transform;
             cg.dodRenderMesh = dodRenderMesh;
-            cg.headArchitype = dodArchitype;
-            cg.bodyArchitype = dodArchitype;
+            cg.headArchitype = birdHeadArchitype;
+            cg.bodyArchitype = birdBodyArchitype;
             cg.CreateCreature(boidId, ref entityManager, ref allTheBoids, ref allTheSpines);
 
 
@@ -530,7 +536,19 @@ namespace ew
 
             );
 
-            dodArchitype = entityManager.CreateArchetype(
+            birdHeadArchitype = entityManager.CreateArchetype(
+                typeof(Translation),
+                typeof(Rotation),
+                typeof(NonUniformScale),
+                typeof(LocalToWorld),
+                typeof(RenderBounds),
+                typeof(Spine),
+                typeof(Boid),
+                typeof(Wander)
+
+            );
+
+            birdBodyArchitype = entityManager.CreateArchetype(
                 typeof(Translation),
                 typeof(Rotation),
                 typeof(NonUniformScale),
@@ -579,10 +597,7 @@ namespace ew
                 material = material
             };
 
-
-            CreateBird(this.transform.position, this.transform.rotation, 0);
-
-            //StartCoroutine(CreateBoids());
+            StartCoroutine(CreateBoids());
             
             Cursor.visible = false;
 
@@ -601,7 +616,9 @@ namespace ew
             {
                 Vector3 pos = UnityEngine.Random.insideUnitSphere * radius;
                 Quaternion q = Quaternion.Euler(UnityEngine.Random.Range(-20, 20), UnityEngine.Random.Range(0, 360), 0);
-                CreateBoidWithTrail(transform.position + pos, q, created, size);
+                //CreateBoidWithTrail(transform.position + pos, q, created, size);
+                CreateBird(this.transform.position, this.transform.rotation, created);
+
                 created++;
                 if (created % maxBoidsPerFrame == 0)
                 {

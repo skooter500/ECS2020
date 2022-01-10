@@ -675,6 +675,8 @@ namespace ew
             var constrainChunk = batchInChunk.GetNativeArray(constrainTypeHandle);
             var oaChunk = batchInChunk.GetNativeArray(obstacleTypeHandle);
 
+            Debug.Log("batchindex: " + batchIndex);
+
             for (int i = 0; i < batchInChunk.Count; i++)
             {
 
@@ -689,6 +691,7 @@ namespace ew
                 ObstacleAvoidance oa = oaChunk[i];
 
                 b.force = AccululateForces(ref b, ref oa, ref s, ref a, ref c, ref w, ref con) * b.weight;
+                Debug.Log("Force: " + i + " " + b.force);
 
                 b.force = Vector3.ClampMagnitude(b.force, b.maxForce);
                 Vector3 newAcceleration = (b.force * b.weight) * (1.0f / b.mass);

@@ -635,14 +635,14 @@ MonoBehaviour:
   animationFrequency: 0.02
   totalNeighbours: 100
   threedcells: 0
-  spineLength: 5
+  spineLength: 6
   bondDamping: 0.01
   angularDamping: 8
   limitUpAndDown: 1
   maxBoidsPerFrame: 500
   seekWeight: 0
   constrainTranslation: {x: 0, y: 0, z: 0}
-  numBoids: 1000
+  numBoids: 1
   radius: 1000
   neighbourDistance: 150
   speed: 2

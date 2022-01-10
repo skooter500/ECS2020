@@ -68,7 +68,7 @@ namespace BGE.Forms
 
         public int spineLength;
 
-        Entity GetCreaturePart(string key, EntityArchetype archetype)
+        Entity GetCreaturePart(string key, EntityArchetype archetype, int index, int boidId)
         {
             if (bodyParts.ContainsKey(key))
             {
@@ -78,6 +78,19 @@ namespace BGE.Forms
             {
                 Entity part = entityManager.CreateEntity(archetype);
                 entityManager.AddSharedComponentData(part, dodRenderMesh);
+                if (index == 0)
+                {
+                    entityManager.SetComponentData(part, new Boid() { boidId = boidId, mass = 1, maxSpeed = 100 * UnityEngine.Random.Range(0.9f, 1.1f), maxForce = 400, weight = 200 });
+                    entityManager.SetComponentData(part, new Wander()
+                        {
+                            distance = 2
+                            ,
+                            radius = 1.2f,
+                            jitter = 80,
+                            target = UnityEngine.Random.insideUnitSphere * 1.2f
+                        });
+
+                }
                 //GameObject part = GameObject.Instantiate<GameObject>(prefab);
 
                 //if (!part.GetComponent<Renderer>().material.name.Contains("Trans"))
@@ -129,7 +142,7 @@ namespace BGE.Forms
             for (int i = 0; i < creatureParts.Count; i ++)
             {
                 CreaturePart cp = creatureParts[i];
-                Entity part = GetCreaturePart("body part " + i, cp.archetype);
+                Entity part = GetCreaturePart("body part " + i, cp.archetype, i, boidId);
 
                 Translation p = new Translation
                 {
