@@ -77,7 +77,7 @@ namespace BGE.Forms
             else
             {
                 Entity part = entityManager.CreateEntity(archetype);
-                
+                entityManager.AddSharedComponentData(part, dodRenderMesh);
                 //GameObject part = GameObject.Instantiate<GameObject>(prefab);
 
                 //if (!part.GetComponent<Renderer>().material.name.Contains("Trans"))
@@ -131,25 +131,30 @@ namespace BGE.Forms
                 CreaturePart cp = creatureParts[i];
                 Entity part = GetCreaturePart("body part " + i, cp.archetype);
 
+                Vector3 pos = cp.position;
+                if (i != 0)
+                {
+                    pos += new Vector3(0, 0, partOffset);
+                }
                 Translation p = new Translation
                 {
-                    Value = cp.position + ((i != 0) ? new Vector3(0, 0, partOffset) : Vector3.zero)
+                    Value = pos
                 };
             
                 if (i == 0)
                 {
                     allTheBoids[boidId] = part;
-                    entityManager.SetComponentData(part, new Spine() { parent = -1, spineId = (spineLength + 1) * boidId });
+                    //entityManager.SetComponentData(part, new Spine() { parent = -1, spineId = (spineLength + 1) * boidId });
                     //boid = part.GetComponent<Boid>();
                 }
                 else
                 {
-                    int parentId = (boidId * (spineLength + 1)) + i;                
+                    /*int parentId = (boidId * (spineLength + 1)) + i;                
                     int spineIndex = (boidId * spineLength) + i;
                     allTheSpines[spineIndex] = part;
 
                     entityManager.SetComponentData(part, new Spine() { parent = parentId, spineId = parentId + 1, offset = new Vector3(0, 0, -cp.size) });
-                    
+                    */
                 }
 
                 Rotation r = new Rotation

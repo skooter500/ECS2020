@@ -24,6 +24,7 @@ namespace ew
         public static int MAX_NEIGHBOURS = 150;
 
         private EntityArchetype boidArchitype;
+        private EntityArchetype dodArchitype;
         private EntityArchetype headArchitype;
         private EntityArchetype tailArchitype;
         private EntityArchetype spineArchitype;
@@ -305,8 +306,8 @@ namespace ew
             cg.spineLength = spineLength;
             //cg.transform = this.transform;
             cg.dodRenderMesh = dodRenderMesh;
-            cg.headArchitype = boidArchitype;
-            cg.bodyArchitype = boidArchitype;
+            cg.headArchitype = dodArchitype;
+            cg.bodyArchitype = dodArchitype;
             cg.CreateCreature(boidId, ref entityManager, ref allTheBoids, ref allTheSpines);
 
 
@@ -526,6 +527,15 @@ namespace ew
                 typeof(Seek),
                 typeof(ObstacleAvoidance),
                 typeof(Spine)
+
+            );
+
+            dodArchitype = entityManager.CreateArchetype(
+                typeof(Translation),
+                typeof(Rotation),
+                typeof(NonUniformScale),
+                typeof(LocalToWorld),
+                typeof(RenderBounds)
 
             );
 

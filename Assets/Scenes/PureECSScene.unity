@@ -620,7 +620,7 @@ MonoBehaviour:
   headPrefab: {fileID: 1969609543632785483, guid: 0134c17cdc6e24c45bf4f028f9aad382, type: 3}
   bodyPrefab: {fileID: 1969609543632785483, guid: 0134c17cdc6e24c45bf4f028f9aad382, type: 3}
   mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
-  dodMesh: {fileID: 0}
+  dodMesh: {fileID: -2194042186925421486, guid: 6ccd2ced8a481a6448f8d741c548fa6c, type: 3}
   material: {fileID: 2100000, guid: b8a4f5c47e7c2ab4c91d9ee24d9a4214, type: 2}
   seperationWeight: 20
   cohesionWeight: 2
