@@ -535,7 +535,8 @@ namespace ew
                 typeof(Rotation),
                 typeof(NonUniformScale),
                 typeof(LocalToWorld),
-                typeof(RenderBounds)
+                typeof(RenderBounds),
+                typeof(Spine)
 
             );
 

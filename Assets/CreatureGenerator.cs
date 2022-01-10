@@ -131,30 +131,27 @@ namespace BGE.Forms
                 CreaturePart cp = creatureParts[i];
                 Entity part = GetCreaturePart("body part " + i, cp.archetype);
 
-                Vector3 pos = cp.position;
-                if (i != 0)
-                {
-                    pos += new Vector3(0, 0, partOffset);
-                }
                 Translation p = new Translation
                 {
-                    Value = pos
+                    Value = cp.position
                 };
+
+                int spineIndex = (boidId * spineLength + 1) + i;
+                allTheSpines[spineIndex] = part;
+                int parentId = spineIndex - 1;
+                
             
                 if (i == 0)
                 {
                     allTheBoids[boidId] = part;
-                    //entityManager.SetComponentData(part, new Spine() { parent = -1, spineId = (spineLength + 1) * boidId });
+                    entityManager.SetComponentData(part, new Spine() { parent = -1, spineId = spineIndex });
                     //boid = part.GetComponent<Boid>();
                 }
                 else
-                {
-                    /*int parentId = (boidId * (spineLength + 1)) + i;                
-                    int spineIndex = (boidId * spineLength) + i;
-                    allTheSpines[spineIndex] = part;
-
-                    entityManager.SetComponentData(part, new Spine() { parent = parentId, spineId = parentId + 1, offset = new Vector3(0, 0, -cp.size) });
-                    */
+                {                    
+                    Vector3 offs = creatureParts[i].position - creatureParts[i-1].position;
+                    Debug.Log(offs);
+                    entityManager.SetComponentData(part, new Spine() { parent = parentId, spineId = spineIndex, offset = offs });
                 }
 
                 Rotation r = new Rotation
