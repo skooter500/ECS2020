@@ -159,7 +159,7 @@ class NoiseSystem:SystemBase
         int size = noiseCube.size;
         int halfSize = size / 2;
         float noiseScale = noiseCube.noiseScale;
-        float offset = 10000;
+        float offset = 0;
         float d = offset + this.delta;
         float s = noiseCube.scale;
         delta += Time.DeltaTime * noiseCube.speed;
@@ -169,8 +169,11 @@ class NoiseSystem:SystemBase
             .ForEach((int entityInQueryIndex, ref NoiseCell cell, ref Translation p, ref NonUniformScale scale) =>
             {
                 int row = entityInQueryIndex / (size);
-                int col = entityInQueryIndex - (row * size);            
-                float height = (s * 0.2f) + (s * Perlin.Noise((p.Value.x + d) * noiseScale, 0, (p.Value.z + d) * noiseScale));
+                int col = entityInQueryIndex - (row * size);      
+                float dist = Mathf.Sqrt((row * row) + (col * col));  
+
+                //float height = (s * 0.2f) + (s * Perlin.Noise((p.Value.x + d) * noiseScale, 0, (p.Value.z + d) * noiseScale));
+                float height = (s * 0.2f) + (s * Mathf.Sin(dist + d));
 
                 // Should use the new noise functions
                 //float2 noisePoint = new float2((p.Value.x + d) * noiseScale, (p.Value.z + d) * noiseScale);
