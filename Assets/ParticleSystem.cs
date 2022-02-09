@@ -23,7 +23,7 @@ public class ParticleSystem : SystemBase
     EntityArchetype particleArchetype;
     EntityManager entityManager;
 
-    int size = 20000;
+    int size = 1000;
 
     private NativeArray<Entity> entities;
     private NativeArray<float3> targetPositions;

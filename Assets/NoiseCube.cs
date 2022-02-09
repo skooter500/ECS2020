@@ -31,6 +31,8 @@ public class NoiseCube : MonoBehaviour
 
     NoiseSystem noiseSystem;
 
+    public float distance = 200;
+
 
     public void OnDestroy()
     {
@@ -159,27 +161,27 @@ class NoiseSystem:SystemBase
         int size = noiseCube.size;
         int halfSize = size / 2;
         float noiseScale = noiseCube.noiseScale;
-        float offset = 0;
-        float d = offset + this.delta;
-        float s = noiseCube.scale;
         delta += Time.DeltaTime * noiseCube.speed;
-
+        float d = this.delta;
+        float s = noiseCube.scale;
+        float maxDist = noiseCube.distance;
         JobHandle handle = Entities
             .WithBurst()
             .ForEach((int entityInQueryIndex, ref NoiseCell cell, ref Translation p, ref NonUniformScale scale) =>
             {
                 int row = entityInQueryIndex / (size);
                 int col = entityInQueryIndex - (row * size);      
-                float dist = Mathf.Sqrt((row * row) + (col * col));  
-
-                //float height = (s * 0.2f) + (s * Perlin.Noise((p.Value.x + d) * noiseScale, 0, (p.Value.z + d) * noiseScale));
-                float height = (s * 0.2f) + (s * Mathf.Sin(dist + d));
 
                 // Should use the new noise functions
                 //float2 noisePoint = new float2((p.Value.x + d) * noiseScale, (p.Value.z + d) * noiseScale);
                 //float height = (s * 0.2f) + (s * noise.snoise(noisePoint));
                 
-                p.Value = new float3(row - halfSize, height / 2, col - halfSize);
+                p.Value = new float3(row - halfSize, 0, col - halfSize);
+                float dist = Mathf.Sqrt(p.Value.x * p.Value.x + p.Value.z * p.Value.z) / maxDist;  
+
+                //float height = (s * 0.2f) + (s * Perlin.Noise((p.Value.x + d) * noiseScale, 0, (p.Value.z + d) * noiseScale));
+                float height = Utilities.Map(Mathf.Sin(dist + d), -1, 1, s, s * 2);
+
                 scale.Value = new float3(1, height, 1);
             })
         .ScheduleParallel(Dependency);

@@ -116,6 +116,7 @@ public class ParticleController : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.Alpha3) || Input.GetKeyDown(KeyCode.Joystick1Button4))
         {
+            Debug.Log("Click count: " + clickCount);
             if (cr != null)
             {
                 StopCoroutine(cr);                        
@@ -136,7 +137,8 @@ public class ParticleController : MonoBehaviour
                         sum += d;
                     }
                     clickCount = 0;                    
-                    delay = sum / 3.0f;                    
+                    delay = sum / 3.0f;                  
+                    Debug.Log("starting coroutine");  
                     cr = StartCoroutine(Change());     
                 }
             }       
