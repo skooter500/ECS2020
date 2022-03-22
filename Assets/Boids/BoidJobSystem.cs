@@ -184,12 +184,7 @@ namespace ew
                 All = new ComponentType[] {
                     ComponentType.ReadOnly<Translation>(),
                     ComponentType.ReadOnly<Rotation>(),
-                    ComponentType.ReadOnly<Boid>(),
-                    ComponentType.ReadOnly<Wander>(),
-                    ComponentType.ReadOnly<Seperation>(),
-                    ComponentType.ReadOnly<Alignment>(),
-                    ComponentType.ReadOnly<Cohesion>(),
-                    ComponentType.ReadOnly<Constrain>()
+                    ComponentType.ReadOnly<Boid>()
                 }
             });
 

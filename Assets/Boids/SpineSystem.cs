@@ -87,7 +87,7 @@ namespace ew
 
                 // Clamp the distance
                 Vector3 lerpedPosition = Vector3.Lerp(p.Value, wantedPosition, bondDamping * dT);
-                Vector3 clampedOffset = wantedPosition - positions[s.parent];
+                Vector3 clampedOffset = lerpedPosition - positions[s.parent];
                 clampedOffset = Vector3.ClampMagnitude(clampedOffset, s.offset.magnitude);
                 //positions[s.spineId] = Vector3.Lerp(positions[s.spineId], wantedPosition, bondDamping * dT);
                 positions[s.spineId] = positions[s.parent] + clampedOffset;

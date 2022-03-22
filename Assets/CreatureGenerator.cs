@@ -163,7 +163,6 @@ namespace BGE.Forms
                 else
                 {                    
                     Vector3 offs = creatureParts[i].position - creatureParts[i-1].position;
-                    Debug.Log(offs);
                     entityManager.SetComponentData(part, new Spine() { parent = parentId, spineId = spineIndex, offset = offs });
                 }
 

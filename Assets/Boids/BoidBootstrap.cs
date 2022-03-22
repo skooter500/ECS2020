@@ -507,9 +507,9 @@ namespace ew
             BoidJobSystem.Instance.Enabled = true;
             HeadsAndTailsSystem.Instance.Enabled = true;
             SpineSystem.Instance.Enabled = true;
-            allTheBoids = new NativeArray<Entity>(numBoids, Allocator.Persistent);
-            allTheheadsAndTails = new NativeArray<Entity>(numBoids * 2, Allocator.Persistent);
-            allTheSpines = new NativeArray<Entity>(numBoids * spineLength, Allocator.Persistent);
+            allTheBoids = new NativeArray<Entity>(MAX_BOIDS, Allocator.Persistent);
+            allTheheadsAndTails = new NativeArray<Entity>(MAX_BOIDS * 2, Allocator.Persistent);
+            allTheSpines = new NativeArray<Entity>(MAX_BOIDS * spineLength, Allocator.Persistent);
 
             entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
 
@@ -616,7 +616,8 @@ namespace ew
             {
                 Vector3 pos = UnityEngine.Random.insideUnitSphere * radius;
                 Quaternion q = Quaternion.Euler(UnityEngine.Random.Range(-20, 20), UnityEngine.Random.Range(0, 360), 0);
-                //CreateBoidWithTrail(transform.position + pos, q, created, size);
+                CreateBoidWithTrail(transform.position + pos, q, created, size);
+                created ++;
                 CreateBird(this.transform.position, this.transform.rotation, created);
 
                 created++;
