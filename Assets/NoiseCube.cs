@@ -34,12 +34,7 @@ public class NoiseCube : MonoBehaviour
 
     public void OnDestroy()
     {
-        Debug.Log("OnDestroy LifeEnabler");
-        if (World.DefaultGameObjectInjectionWorld != null && World.DefaultGameObjectInjectionWorld.IsCreated)
-        {
-            NoiseSystem.Instance.DestroyEntities();
-            NoiseSystem.Instance.Enabled = false;
-        }
+     
     }
     
 
@@ -47,28 +42,8 @@ public class NoiseCube : MonoBehaviour
     void Start()
     {
         
-        /*
-        int halfSize = size / 2;
-
-        float start = Time.realtimeSinceStartup;
-
-        for(int row = 0 ; row < size ; row ++)
-        {
-            for(int col = 0 ; col < size ; col ++)
-            {
-                Entity e = entityManager.CreateEntity(archetype);
-                entityManager.AddComponentData(e, new Translation{Value = new float3(row - halfSize, 0, col - halfSize)});
-                entityManager.AddComponentData(e, new Rotation{Value = Quaternion.identity});
-                entityManager.AddComponentData(e, new NonUniformScale{Value = new float3(1,1,1)});
-                entityManager.AddSharedComponentData(e, r);
-            }
-        }
-
-        float ellapsed = Time.realtimeSinceStartup - start;
-        Debug.Log("Creating " + (size * size) + " entities took " + ellapsed + " seconds");
-        */
         NoiseSystem.Instance.Enabled = true;   
-        NoiseSystem.Instance.CreateEntities();
+        
     }
 
     
@@ -99,16 +74,7 @@ class NoiseSystem:SystemBase
         Instance = this;
         Enabled = false;
 
-        entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
         
-        archetype = entityManager.CreateArchetype(
-            typeof(Translation),
-            typeof(Rotation),
-            typeof(NonUniformScale),
-            typeof(LocalToWorld),
-            typeof(RenderBounds),
-            typeof(NoiseCell)
-        );
     }
 
     protected override void OnDestroy()
@@ -117,40 +83,24 @@ class NoiseSystem:SystemBase
 
     public void DestroyEntities()
     {
-        entityManager.DestroyEntity(noiseQuery);
+        
     }
 
     protected override void OnStopRunning()
     {
-        Debug.Log("On stop running");
-        DestroyEntities();
+        
     }
 
     protected override void OnStartRunning()
     {
+        noiseCube = GameObject.FindObjectOfType<NoiseCube>();        
+        
     }
 
     public void CreateEntities()
     {
         
-        noiseCube = GameObject.FindObjectOfType<NoiseCube>();        
-        cubeMesh = new RenderMesh 
-        {
-            mesh = noiseCube.mesh,
-            material = noiseCube.material
-        };
-
-        noiseQuery = GetEntityQuery(new EntityQueryDesc()
-        {
-            All = new ComponentType[] {
-                    ComponentType.ReadOnly<NoiseCell>()
-                }
-        });
-
-        entities = new NativeArray<Entity>((int)Mathf.Pow(noiseCube.size, 2), Allocator.Persistent);
-
-        entityManager.CreateEntity(archetype, entities);        
-        entityManager.AddSharedComponentData(noiseQuery, cubeMesh);
+        
     }
 
 
